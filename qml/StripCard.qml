@@ -11,12 +11,18 @@ Rectangle {
     readonly property bool sendsToMic: strip.routes[5] || strip.routes[6] || strip.routes[7]
     readonly property bool isApps: strip.virtual_input && strip.label === "Apps"
     // Voice effects live on the back of mic strips. The front only shows whether any of them is on.
-    readonly property bool effectsOn: !strip.virtual_input
-        && (strip.gate_on || strip.duck_on || strip.eq_on || strip.comp_on || strip.bass_db !== 0 || strip.brightness_db !== 0 || strip.pitch_semitones !== 0)
+    readonly property bool effectsOn: strip.eq_on || strip.comp_on
+        || (!strip.virtual_input && (strip.gate_on || strip.duck_on || strip.bass_db !== 0 || strip.brightness_db !== 0 || strip.pitch_semitones !== 0))
     // Virtual strips (Apps, Media) flip to the list of programs using them; the dot says someone is.
     readonly property var playing: strip.virtual_input ? app.streams.filter(s => s.target === strip.label.toLowerCase()) : []
-    readonly property bool dotOn: strip.virtual_input ? playing.length > 0 : effectsOn
-    property int tab: Qt.application.arguments.indexOf("--tab") >= 0 ? parseInt(Qt.application.arguments[Qt.application.arguments.indexOf("--tab") + 1]) : 0   // back of a mic strip: 0 voice, 1 EQ, 2 dynamics
+    readonly property bool dotOn: strip.virtual_input ? (playing.length > 0 || effectsOn) : effectsOn
+    // --tab N shows tab N everywhere; --tab mix gives the first three strips one tab each (dev aid for screenshots).
+    property int tab: {
+        const i = Qt.application.arguments.indexOf("--tab");
+        if (i < 0) return 0;
+        const v = Qt.application.arguments[i + 1];
+        return v === "mix" ? index % 3 : parseInt(v);
+    }
     readonly property real reduction: app.meters.comp ? (app.meters.comp[index] || 0) : 0
     function hz(v) { return v >= 1000 ? (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + " kHz" : Math.round(v) + " Hz"; }
     property real turn: Qt.application.arguments.indexOf("--flip") >= 0 ? 180 : 0   // degrees; --flip is a dev aid for screenshots
@@ -207,7 +213,7 @@ Rectangle {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
-                    text: card.strip.virtual_input ? (card.isApps ? "Programs on the system output" : "Programs you sent here") : "Gate · Bass · Brightness · Pitch · EQ"
+                    text: card.strip.virtual_input ? (card.isApps ? "Programs on the system output · EQ" : "Programs you sent here · EQ") : "Gate · Bass · Brightness · Pitch · EQ"
                     color: card.app.dim
                     font.pixelSize: 11
                 }
@@ -421,172 +427,8 @@ Rectangle {
         }
         }
 
-        // ---- EQ: three bell filters (on top of Bass and Brightness) ----
-        ColumnLayout {
-            visible: card.tab === 1
-            Layout.fillWidth: true
-            spacing: 12
-            Chip {
-                Layout.fillWidth: true
-                app: card.app
-                text: card.app.t("EQ")
-                checked: !!card.strip.eq_on
-                tip: "Three adjustable bands, after Bass and Brightness"
-                onToggled: card.set(s => s.eq_on = !s.eq_on)
-            }
-            Repeater {
-                model: [
-                    { name: "Low", from: 40, to: 800, step: 10 },
-                    { name: "Mid", from: 200, to: 5000, step: 50 },
-                    { name: "High", from: 1500, to: 12000, step: 100 }
-                ]
-                ColumnLayout {
-                    id: band
-                    required property int index
-                    required property var modelData
-                    Layout.fillWidth: true
-                    spacing: 6
-                    enabled: !!card.strip.eq_on
-                    opacity: enabled ? 1 : 0.5
-                    Text {
-                        text: card.app.t(band.modelData.name + " band")
-                        color: card.app.ink
-                        font.pixelSize: 12
-                        font.weight: Font.DemiBold
-                    }
-                    ToneSlider {
-                        Layout.fillWidth: true
-                        app: card.app
-                        label: "Gain"
-                        value: card.strip.eq_db[band.index]
-                        onMoved: v => card.set(s => s.eq_db[band.index] = v)
-                    }
-                    ToneSlider {
-                        Layout.fillWidth: true
-                        app: card.app
-                        label: "Frequency"
-                        from: band.modelData.from
-                        to: band.modelData.to
-                        step: band.modelData.step
-                        resetValue: [250, 1000, 3500][band.index]
-                        format: card.hz
-                        value: card.strip.eq_hz[band.index]
-                        onMoved: v => card.set(s => s.eq_hz[band.index] = v)
-                    }
-                }
-            }
-        }
-
-        // ---- Dynamics: compressor ----
-        ColumnLayout {
-            visible: card.tab === 2
-            Layout.fillWidth: true
-            spacing: 12
-            Chip {
-                Layout.fillWidth: true
-                app: card.app
-                text: card.app.t("Compressor")
-                checked: !!card.strip.comp_on
-                tip: "Turns loud parts down so your level stays even"
-                onToggled: card.set(s => s.comp_on = !s.comp_on)
-            }
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 12
-                enabled: !!card.strip.comp_on
-                opacity: enabled ? 1 : 0.5
-                ToneSlider {
-                    Layout.fillWidth: true
-                    app: card.app
-                    label: "Threshold"
-                    from: -60
-                    to: 0
-                    resetValue: -18
-                    value: card.strip.comp_threshold_db
-                    onMoved: v => card.set(s => s.comp_threshold_db = v)
-                }
-                ToneSlider {
-                    Layout.fillWidth: true
-                    app: card.app
-                    label: "Ratio"
-                    from: 1
-                    to: 20
-                    resetValue: 3
-                    format: v => v.toFixed(1) + " : 1"
-                    value: card.strip.comp_ratio
-                    onMoved: v => card.set(s => s.comp_ratio = v)
-                }
-                ToneSlider {
-                    Layout.fillWidth: true
-                    app: card.app
-                    label: "Attack"
-                    from: 0.5
-                    to: 200
-                    step: 0.5
-                    resetValue: 10
-                    format: v => v.toFixed(1) + " ms"
-                    value: card.strip.comp_attack_ms
-                    onMoved: v => card.set(s => s.comp_attack_ms = v)
-                }
-                ToneSlider {
-                    Layout.fillWidth: true
-                    app: card.app
-                    label: "Release"
-                    from: 10
-                    to: 1000
-                    step: 5
-                    resetValue: 120
-                    format: v => Math.round(v) + " ms"
-                    value: card.strip.comp_release_ms
-                    onMoved: v => card.set(s => s.comp_release_ms = v)
-                }
-                ToneSlider {
-                    Layout.fillWidth: true
-                    app: card.app
-                    label: "Make-up gain"
-                    from: 0
-                    to: 24
-                    resetValue: 0
-                    value: card.strip.comp_makeup_db
-                    onMoved: v => card.set(s => s.comp_makeup_db = v)
-                }
-                // How far the compressor is turning you down right now.
-                Item {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 34
-                    Text {
-                        anchors.left: parent.left
-                        anchors.top: parent.top
-                        text: card.app.t("Turning down")
-                        color: card.app.dim
-                        font.pixelSize: 11
-                    }
-                    Text {
-                        anchors.right: parent.right
-                        anchors.top: parent.top
-                        text: card.reduction.toFixed(1) + " dB"
-                        color: card.reduction > 0.5 ? card.app.accent : card.app.dim
-                        font.family: card.app.mono
-                        font.pixelSize: 11
-                    }
-                    Rectangle {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.bottom: parent.bottom
-                        height: 8
-                        radius: 4
-                        color: card.app.hover
-                        Rectangle {
-                            anchors.right: parent.right
-                            height: parent.height
-                            radius: 4
-                            width: parent.width * Math.min(1, card.reduction / 20)
-                            color: card.app.accent
-                        }
-                    }
-                }
-            }
-        }
+        EqPanel { visible: card.tab === 1; card: card; Layout.fillWidth: true }
+        DynamicsPanel { visible: card.tab === 2; card: card; Layout.fillWidth: true }
         Item { Layout.fillHeight: true }
         Text {
             Layout.fillWidth: true
@@ -619,35 +461,68 @@ Rectangle {
                 elide: Text.ElideRight
             }
         }
-        StreamList {
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 5
+            Repeater {
+                model: ["Programs", "EQ", "Dynamics"]
+                Chip {
+                    required property int index
+                    required property string modelData
+                    Layout.fillWidth: true
+                    app: card.app
+                    text: card.app.t(modelData)
+                    checked: card.tab === index
+                    onToggled: card.tab = index
+                }
+            }
+        }
+        ColumnLayout {
+            visible: card.tab === 0
             Layout.fillWidth: true
             Layout.fillHeight: true
-            app: card.app
-            target: card.strip.label.toLowerCase()
-            emptyText: card.isApps ? "Nothing playing. Programs that use the system output show up here." : "Nothing playing. Drag a program here, or send one from Plasma's volume menu."
+            spacing: 12
+            StreamList {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                app: card.app
+                target: card.strip.label.toLowerCase()
+                emptyText: card.isApps ? "Nothing playing. Programs that use the system output show up here." : "Nothing playing. Drag a program here, or send one from Plasma's volume menu."
+            }
+            Text {
+                visible: otherList.items.length > 0
+                text: card.app.t("Playing elsewhere")
+                color: card.app.dim
+                font.family: card.app.mono
+                font.pixelSize: 10
+                font.letterSpacing: 1
+            }
+            StreamList {
+                id: otherList
+                visible: items.length > 0
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(items.length * 40, 140)
+                app: card.app
+                target: "other"
+            }
+            Text {
+                Layout.fillWidth: true
+                text: "Drag a program onto a program strip to send it there."
+                color: card.app.dim
+                font.pixelSize: 11
+                wrapMode: Text.WordWrap
+            }
         }
+        EqPanel { visible: card.tab === 1; card: card; Layout.fillWidth: true }
+        DynamicsPanel { visible: card.tab === 2; card: card; Layout.fillWidth: true }
+        Item { visible: card.tab !== 0; Layout.fillHeight: true }
         Text {
-            visible: otherList.items.length > 0
-            text: card.app.t("Playing elsewhere")
-            color: card.app.dim
-            font.family: card.app.mono
-            font.pixelSize: 10
-            font.letterSpacing: 1
-        }
-        StreamList {
-            id: otherList
-            visible: items.length > 0
+            visible: card.tab !== 0
             Layout.fillWidth: true
-            Layout.preferredHeight: Math.min(items.length * 40, 140)
-            app: card.app
-            target: "other"
-        }
-        Text {
-            Layout.fillWidth: true
-            text: "Drag a program onto a program strip to send it there."
+            text: "Double-click a slider to reset it."
+            wrapMode: Text.WordWrap
             color: card.app.dim
             font.pixelSize: 11
-            wrapMode: Text.WordWrap
         }
     }
 

@@ -207,7 +207,7 @@
    "duck_db": -10.0,
    "duck_b": true,
    "duck_a": false,
-   "eq_on": false,
+   "eq_on": true,
    "eq_hz": [
     250,
     1000,
@@ -215,8 +215,8 @@
    ],
    "eq_db": [
     0,
-    0,
-    0
+    -3,
+    2
    ],
    "comp_on": false,
    "comp_threshold_db": -18,
@@ -263,9 +263,9 @@
     0,
     0
    ],
-   "comp_on": false,
+   "comp_on": true,
    "comp_threshold_db": -18,
-   "comp_ratio": 3,
+   "comp_ratio": 4,
    "comp_attack_ms": 10,
    "comp_release_ms": 120,
    "comp_makeup_db": 0
