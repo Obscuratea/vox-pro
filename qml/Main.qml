@@ -20,8 +20,8 @@ ApplicationWindow {
     SystemPalette { id: pal; colorGroup: SystemPalette.Active }
     Themes { id: themes }
     readonly property int themeArg: Qt.application.arguments.indexOf("--theme")
-    readonly property string themeWanted: themeArg >= 0 ? Qt.application.arguments[themeArg + 1] : (cfg.theme || "default")
-    readonly property var theme: themes.find(themeWanted) || themes.find("default")
+    readonly property string themeWanted: themeArg >= 0 ? Qt.application.arguments[themeArg + 1] : (cfg.theme || "pro")
+    readonly property var theme: themes.find(themeWanted) || themes.find("pro")
     readonly property bool ownColors: theme.style !== "auto"
     // Follow system keeps the default (soft, gradient) look and only borrows the Plasma colours.
     readonly property string style: ownColors ? theme.style : "soft"
@@ -46,18 +46,21 @@ ApplicationWindow {
     readonly property color bg: baseWindow
     // Outlined themes (Pure Black) draw boxes and controls as thin outlines on the bare window instead of grey fills.
     readonly property bool outlined: ownColors && !!theme.outline
-    readonly property color controlEdge: outlined ? Qt.alpha(baseText, 0.30) : "transparent"
+    // The Pro theme: gold outlines and round gold metal knobs.
+    readonly property bool gold: ownColors && !!theme.gold
+    readonly property color goldEdge: gold ? theme.edgeColor : baseText
+    readonly property color controlEdge: outlined ? (gold ? Qt.alpha(goldEdge, 0.70) : Qt.alpha(baseText, 0.30)) : "transparent"
     readonly property color panel: outlined ? "transparent" : Qt.tint(baseWindow, Qt.alpha(baseText, soft ? 0.055 : 0.035))
     // With a picture behind them the boxes turn translucent (and frosted, see Glass.qml).
     readonly property color panelFill: bgOn ? Qt.alpha(Qt.darker(baseWindow, 1.25), 0.52) : panel
     readonly property color tonal: outlined ? "transparent" : Qt.tint(baseWindow, Qt.alpha(baseText, 0.11))
-    readonly property color edge: outlined ? Qt.alpha(baseText, 0.24) : bgOn ? Qt.alpha(baseText, 0.14) : soft ? "transparent" : line
+    readonly property color edge: outlined ? (gold ? Qt.alpha(goldEdge, 0.55) : Qt.alpha(baseText, 0.24)) : bgOn ? Qt.alpha(baseText, 0.14) : soft ? "transparent" : line
     readonly property int rCard: soft ? 20 : 0
     readonly property int rBox: soft ? 14 : 0
     readonly property int rChip: soft ? 14 : diamond ? 0 : 4
     readonly property color ink: baseText
     readonly property color dim: Qt.alpha(baseText, 0.55)
-    readonly property color line: diamond ? frameDim : Qt.alpha(baseText, 0.15)
+    readonly property color line: diamond ? frameDim : gold ? Qt.alpha(goldEdge, 0.30) : Qt.alpha(baseText, 0.15)
     readonly property color hover: Qt.alpha(baseText, 0.06)
     // The accent is the scheme's focus colour (its selection colour is the deeper container tone).
     // Re-read while following the system, so a wallpaper-driven accent change shows up without a restart.

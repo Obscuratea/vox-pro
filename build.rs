@@ -27,6 +27,7 @@ fn main() {
         "qml/SettingsPanel.qml",
         "qml/KeyCapture.qml",
         "qml/Tray.qml",
+        "qml/Knob.qml",
         "qml/EqPanel.qml",
         "qml/DynamicsPanel.qml",
     ]))

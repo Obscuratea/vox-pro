@@ -64,6 +64,7 @@ Item {
         width: fader.vertical ? fader.width : fader.handleLength
         height: fader.vertical ? fader.handleLength : fader.height
         radius: fader.app.soft ? (fader.vertical ? height / 2 : width / 2) : 0
+        visible: !fader.app.gold
         color: drag.pressed || drag.containsMouse ? fader.app.accent : fader.app.ink
 
         Rectangle {
@@ -73,6 +74,17 @@ Item {
             radius: 1
             color: fader.app.bg
         }
+    }
+
+    // Pro theme: a round gold metal knob on the same spot.
+    Knob {
+        visible: fader.app.gold
+        readonly property real along: fader.posOf(fader.value) * fader.span + fader.handleLength / 2
+        width: fader.vertical ? 26 : Math.min(22, fader.height - 2)
+        height: width
+        x: (fader.vertical ? fader.width / 2 : along) - width / 2
+        y: (fader.vertical ? fader.height - along : fader.height / 2) - height / 2
+        lit: drag.pressed || drag.containsMouse
     }
 
     MouseArea {

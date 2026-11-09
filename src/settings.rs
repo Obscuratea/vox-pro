@@ -156,7 +156,7 @@ pub struct Settings {
 }
 
 fn default_theme() -> String {
-    "default".into()
+    "pro".into()
 }
 
 impl Default for Settings {

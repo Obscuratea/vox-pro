@@ -74,7 +74,16 @@ Item {
             width: tone.handle
             height: tone.handle
             radius: tone.app.soft ? width / 2 : 0
+            visible: !tone.app.gold
             color: area.pressed || area.containsMouse ? tone.app.accent : tone.app.ink
+        }
+        Knob {
+            visible: tone.app.gold
+            x: tone.posOf(tone.value) * rail.width - width / 2
+            anchors.verticalCenter: parent.verticalCenter
+            width: 18
+            height: 18
+            lit: area.pressed || area.containsMouse
         }
     }
 
