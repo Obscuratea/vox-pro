@@ -403,7 +403,7 @@ ColumnLayout {
                 model: [
                     { id: "flac", name: "FLAC", note: "24-bit, lossless · about 0.5 GB an hour" },
                     { id: "wav", name: "WAV", note: "32-bit float, lossless, biggest · about 1.4 GB an hour" },
-                    { id: "mp3", name: "MP3", note: "192 kbps, lossy, smallest · about 85 MB an hour" }
+                    { id: "opus", name: "Opus", note: "128 kbps, lossy, smallest · about 55 MB an hour" }
                 ]
                 RowLayout {
                     required property var modelData

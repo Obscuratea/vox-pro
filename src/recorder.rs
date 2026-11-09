@@ -21,15 +21,15 @@ pub enum Format {
     Wav,
     /// 24-bit, lossless, roughly half the size of the WAV.
     Flac,
-    /// 16-bit-class lossy, 192 kbps. Smallest files.
-    Mp3,
+    /// Lossy, 128 kbps. Smallest files.
+    Opus,
 }
 
 impl Format {
     pub fn parse(name: &str) -> Self {
         match name {
             "wav" => Self::Wav,
-            "mp3" => Self::Mp3,
+            "opus" => Self::Opus,
             _ => Self::Flac,
         }
     }
@@ -38,7 +38,7 @@ impl Format {
         match self {
             Self::Wav => "wav",
             Self::Flac => "flac",
-            Self::Mp3 => "mp3",
+            Self::Opus => "opus",
         }
     }
 }
@@ -86,7 +86,7 @@ impl Recorder {
         let mut sink: Box<dyn Sink> = match format {
             Format::Wav => Box::new(WavSink::new(file, rate).map_err(|e| e.to_string())?),
             Format::Flac => Box::new(FlacSink::new(file, rate).map_err(|e| e.to_string())?),
-            Format::Mp3 => Box::new(Mp3Sink::new(file, rate)?),
+            Format::Opus => Box::new(OpusSink::new(file, rate)?),
         };
         let (tx, rx) = sync_channel::<Vec<f32>>(256);
         // LAME keeps big buffers on the stack, more than a spawned thread gets by default.
@@ -293,50 +293,112 @@ impl Sink for FlacSink {
     }
 }
 
-// ---- MP3: lossy, 192 kbps ----
+// ---- Opus: lossy, 128 kbps, in an Ogg file ----
 
-struct Mp3Sink {
+/// 20 ms at 48 kHz, per channel.
+const OPUS_FRAME: usize = 960;
+const OPUS_KBPS: i32 = 128;
+
+struct OpusSink {
     file: BufWriter<File>,
-    encoder: mp3lame_encoder::Encoder,
-    out: Vec<u8>,
+    ogg: Option<ogg::PacketWriter<'static, Vec<u8>>>,
+    encoder: opus::Encoder,
+    serial: u32,
+    /// Interleaved samples waiting for a full 20 ms frame.
+    pending: Vec<f32>,
+    /// Frames' worth of samples (per channel) given to the encoder, and the delay it adds at the start.
+    encoded: u64,
+    pre_skip: u64,
+    /// A page is closed about once a second, so a killed recording is playable up to there.
+    packets: u32,
+    /// Packet held back one step so the last one can be marked as the end of the stream.
+    held: Option<Vec<u8>>,
 }
 
-impl Mp3Sink {
-    fn new(file: BufWriter<File>, rate: u32) -> Result<Self, String> {
-        let mut b = mp3lame_encoder::Builder::new().ok_or("can't start the MP3 encoder")?;
-        b.set_num_channels(2).map_err(|e| format!("{e:?}"))?;
-        b.set_sample_rate(rate).map_err(|e| format!("{e:?}"))?;
-        b.set_brate(mp3lame_encoder::Bitrate::Kbps192).map_err(|e| format!("{e:?}"))?;
-        b.set_quality(mp3lame_encoder::Quality::Good).map_err(|e| format!("{e:?}"))?;
-        let encoder = b.build().map_err(|e| format!("{e:?}"))?;
-        Ok(Self { file, encoder, out: Vec::new() })
+impl OpusSink {
+    fn new(mut file: BufWriter<File>, rate: u32) -> Result<Self, String> {
+        if rate != 48_000 {
+            return Err("Opus recording needs a 48 kHz mixer".into());
+        }
+        let mut encoder = opus::Encoder::new(rate, opus::Channels::Stereo, opus::Application::Audio).map_err(|e| e.to_string())?;
+        encoder.set_bitrate(opus::Bitrate::Bits(OPUS_KBPS * 1000)).map_err(|e| e.to_string())?;
+        let pre_skip = encoder.get_lookahead().map_err(|e| e.to_string())?.max(0) as u64;
+        let serial = std::process::id();
+        let mut ogg = ogg::PacketWriter::new(Vec::new());
+        // OpusHead: magic, version 1, 2 channels, pre-skip, input rate, output gain 0, mapping family 0.
+        let mut head = Vec::from(*b"OpusHead");
+        head.push(1);
+        head.push(2);
+        head.extend((pre_skip as u16).to_le_bytes());
+        head.extend(rate.to_le_bytes());
+        head.extend(0i16.to_le_bytes());
+        head.push(0);
+        ogg.write_packet(head, serial, ogg::PacketWriteEndInfo::EndPage, 0).map_err(|e| e.to_string())?;
+        let mut tags = Vec::from(*b"OpusTags");
+        let vendor = b"Vox Pro";
+        tags.extend((vendor.len() as u32).to_le_bytes());
+        tags.extend(vendor);
+        tags.extend(0u32.to_le_bytes());
+        ogg.write_packet(tags, serial, ogg::PacketWriteEndInfo::EndPage, 0).map_err(|e| e.to_string())?;
+        file.write_all(ogg.inner_mut()).map_err(|e| e.to_string())?;
+        ogg.inner_mut().clear();
+        Ok(Self { file, ogg: Some(ogg), encoder, serial, pending: Vec::new(), encoded: 0, pre_skip, packets: 0, held: None })
+    }
+
+    /// Encode one full frame from the front of `pending`.
+    fn encode_frame(&mut self) -> io::Result<()> {
+        let mut out = vec![0u8; 4000];
+        let n = self
+            .encoder
+            .encode_float(&self.pending[..OPUS_FRAME * 2], &mut out)
+            .map_err(|e| io::Error::other(e.to_string()))?;
+        out.truncate(n);
+        self.pending.drain(..OPUS_FRAME * 2);
+        self.encoded += OPUS_FRAME as u64;
+        if let Some(previous) = self.held.replace(out) {
+            self.put(previous, ogg::PacketWriteEndInfo::NormalPacket, self.pre_skip + self.encoded - OPUS_FRAME as u64)?;
+        }
+        Ok(())
+    }
+
+    fn put(&mut self, packet: Vec<u8>, info: ogg::PacketWriteEndInfo, granule: u64) -> io::Result<()> {
+        self.packets += 1;
+        let info = if info == ogg::PacketWriteEndInfo::NormalPacket && self.packets % 50 == 0 {
+            ogg::PacketWriteEndInfo::EndPage
+        } else {
+            info
+        };
+        let w = self.ogg.as_mut().unwrap();
+        w.write_packet(packet, self.serial, info, granule)?;
+        self.file.write_all(w.inner_mut())?;
+        w.inner_mut().clear();
+        Ok(())
     }
 }
 
-impl Sink for Mp3Sink {
+impl Sink for OpusSink {
     fn write(&mut self, samples: &[f32]) -> io::Result<()> {
-        let pcm = |x: f32| (x.clamp(-1.0, 1.0) * 32_767.0).round() as i16;
-        let left: Vec<i16> = samples.chunks_exact(2).map(|f| pcm(f[0])).collect();
-        let right: Vec<i16> = samples.chunks_exact(2).map(|f| pcm(f[1])).collect();
-        self.out.clear();
-        self.out.reserve(mp3lame_encoder::max_required_buffer_size(left.len()));
-        self.encoder
-            .encode_to_vec(mp3lame_encoder::DualPcm { left: &left, right: &right }, &mut self.out)
-            .map_err(|e| io::Error::other(format!("{e:?}")))?;
-        self.file.write_all(&self.out)
+        self.pending.extend_from_slice(samples);
+        while self.pending.len() >= OPUS_FRAME * 2 {
+            self.encode_frame()?;
+        }
+        Ok(())
     }
 
     fn checkpoint(&mut self) -> io::Result<()> {
-        self.file.flush() // MP3 is a plain stream of frames, playable as it stands
+        self.file.flush()
     }
 
     fn finish(&mut self) -> io::Result<()> {
-        self.out.clear();
-        self.out.reserve(16_384);
-        self.encoder
-            .flush_to_vec::<mp3lame_encoder::FlushNoGap>(&mut self.out)
-            .map_err(|e| io::Error::other(format!("{e:?}")))?;
-        self.file.write_all(&self.out)?;
+        // The real length, so the padding of the last frame is trimmed off on playback.
+        let real = self.encoded + (self.pending.len() / 2) as u64;
+        if !self.pending.is_empty() {
+            self.pending.resize(OPUS_FRAME * 2, 0.0);
+            self.encode_frame()?;
+        }
+        if let Some(last) = self.held.take() {
+            self.put(last, ogg::PacketWriteEndInfo::EndStream, self.pre_skip + real)?;
+        }
         self.file.flush()
     }
 }
@@ -404,13 +466,17 @@ mod tests {
     }
 
     #[test]
-    fn mp3_recordings_decode_with_the_right_length() {
-        let path = record_tone(Format::Mp3, "t.mp3");
+    fn opus_recordings_decode_with_the_right_length() {
+        let path = record_tone(Format::Opus, "t.opus");
         let size = std::fs::metadata(&path).unwrap().len();
-        assert!((40_000..60_000).contains(&size), "2 s at 192 kbps is about 48 KB, got {size}");
+        assert!((20_000..40_000).contains(&size), "2 s at 128 kbps is about 32 KB, got {size}");
         if let Some(out) = tool("ffprobe", &["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0"], &path) {
             let secs: f32 = String::from_utf8_lossy(&out.stdout).trim().parse().unwrap_or(0.0);
-            assert!((secs - 2.0).abs() < 0.2, "expected about 2 s, got {secs}");
+            assert!((secs - 2.0).abs() < 0.05, "expected 2 s, got {secs}");
+        }
+        // Decode it for real: a clean decode with no errors.
+        if let Ok(out) = std::process::Command::new("ffmpeg").args(["-v", "error", "-i"]).arg(&path).args(["-f", "null", "-"]).output() {
+            assert!(out.stderr.is_empty(), "decode errors: {}", String::from_utf8_lossy(&out.stderr));
         }
         let _ = std::fs::remove_file(&path);
     }
