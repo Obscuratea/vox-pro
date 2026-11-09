@@ -3,7 +3,7 @@
 pkgname=vox-pro
 pkgver=0.1.0
 pkgrel=1
-pkgdesc='Voice and audio mixer for PipeWire, in the spirit of Voicemeeter Banana'
+pkgdesc='Voice and audio mixer for PipeWire, with 8 strips, EQ, compressors, limiters and recording (Voicemeeter Potato style)'
 arch=('x86_64')
 license=('custom')
 depends=('pipewire' 'wireplumber' 'qt6-base' 'qt6-declarative' 'libnotify' 'soundtouch')
