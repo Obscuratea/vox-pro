@@ -9,7 +9,7 @@
 //! handler share the mixer without locks. Strips write processed audio into ring buffers
 //! and each bus reads from them, which costs at most one graph cycle of delay.
 
-use crate::dsp::{SAMPLE_RATE, Voice, db_to_lin};
+use crate::dsp::{CompParams, SAMPLE_RATE, Voice, db_to_lin};
 use crate::settings::{A_BUSES, BUSES, STRIPS, Settings};
 use pipewire as pw;
 use pw::properties::properties;
@@ -65,6 +65,9 @@ pub struct Devices {
 pub struct Shared {
     pub strip_peaks: [[AtomicU32; 2]; STRIPS],
     pub bus_peaks: [[AtomicU32; 2]; BUSES],
+    /// Deepest compressor / limiter gain reduction (dB, positive) since the UI last asked.
+    pub strip_reduction: [AtomicU32; STRIPS],
+    pub bus_reduction: [AtomicU32; BUSES],
     pub devices: Mutex<Devices>,
     /// node.name -> global id of the nodes we created, so they can be made system defaults.
     pub own_nodes: Mutex<HashMap<String, u32>>,
@@ -83,6 +86,8 @@ impl Shared {
         Self {
             strip_peaks: std::array::from_fn(|_| std::array::from_fn(|_| AtomicU32::new(0))),
             bus_peaks: std::array::from_fn(|_| std::array::from_fn(|_| AtomicU32::new(0))),
+            strip_reduction: std::array::from_fn(|_| AtomicU32::new(0)),
+            bus_reduction: std::array::from_fn(|_| AtomicU32::new(0)),
             devices: Mutex::default(),
             own_nodes: Mutex::default(),
             streams: Mutex::new("[]".into()),
@@ -167,6 +172,8 @@ struct BusState {
     cursors: [u64; STRIPS],
     /// Push-to-talk gate per strip (1 open, 0 shut), eased over each cycle so the key doesn't click.
     ptt_gate: [f32; STRIPS],
+    /// The limiter's current gain (1 = not limiting).
+    limit: f32,
     /// Ducking gain per strip (1 = not ducked), eased per sample: down fast, back up slowly.
     duck_gain: [f32; STRIPS],
     gain: f32,
@@ -197,7 +204,7 @@ impl Mixer {
                     gain: 0.0,
                 })
                 .collect(),
-            buses: (0..BUSES).map(|_| BusState { cursors: [0; STRIPS], ptt_gate: [1.0; STRIPS], duck_gain: [1.0; STRIPS], gain: 0.0 }).collect(),
+            buses: (0..BUSES).map(|_| BusState { cursors: [0; STRIPS], ptt_gate: [1.0; STRIPS], duck_gain: [1.0; STRIPS], limit: 1.0, gain: 0.0 }).collect(),
             scratch: Vec::new(),
             block: Vec::new(),
             dry: Vec::new(),
@@ -237,6 +244,7 @@ impl Mixer {
         for ch in 0..2 {
             record_peak(&self.shared.strip_peaks[index][ch], peak[ch]);
         }
+        record_peak(&self.shared.strip_reduction[index], state.voice.comp_reduction_db().max(0.0));
         // Auto-duck trigger: a mic strip that is talking keeps Apps and Media ducked for a moment.
         let config = &self.settings.strips[index];
         if config.duck_on && !config.virtual_input {
@@ -309,10 +317,24 @@ impl Mixer {
         let state = &mut self.buses[index];
         let step = smoothing();
         let mut peak = [0f32; 2];
+        let ceiling = bus.limiter_on.then(|| db_to_lin(bus.limiter_db));
+        let release = 1.0 - (-1.0 / (0.15 * SAMPLE_RATE)).exp();
+        if ceiling.is_none() {
+            state.limit = 1.0;
+        }
+        let mut deepest = 1.0f32;
         for (frame, bytes) in self.scratch.iter().zip(out.chunks_exact_mut(STRIDE)) {
             state.gain += (target - state.gain) * step;
-            let l = frame[0] * state.gain;
-            let r = frame[1] * state.gain;
+            let mut l = frame[0] * state.gain;
+            let mut r = frame[1] * state.gain;
+            if let Some(ceiling) = ceiling {
+                // Brickwall: turn down at once for a peak above the ceiling, ease back up afterwards.
+                let needed = (ceiling / l.abs().max(r.abs()).max(1e-9)).min(1.0);
+                state.limit = needed.min(state.limit + (1.0 - state.limit) * release);
+                l *= state.limit;
+                r *= state.limit;
+                deepest = deepest.min(state.limit);
+            }
             peak[0] = peak[0].max(l.abs());
             peak[1] = peak[1].max(r.abs());
             bytes[0..4].copy_from_slice(&l.to_le_bytes());
@@ -321,6 +343,7 @@ impl Mixer {
         for ch in 0..2 {
             record_peak(&self.shared.bus_peaks[index][ch], peak[ch]);
         }
+        record_peak(&self.shared.bus_reduction[index], -20.0 * deepest.log10());
     }
 }
 
@@ -552,6 +575,16 @@ fn apply(
         let mut m = mixer.borrow_mut();
         for (state, strip) in m.strips.iter_mut().zip(&new.strips) {
             state.voice.configure(strip.bass_db, strip.brightness_db, strip.pitch_semitones);
+            state.voice.set_eq(strip.eq_on.then(|| {
+                [0, 1, 2].map(|i| (strip.eq_hz[i], strip.eq_db[i]))
+            }));
+            state.voice.set_comp(strip.comp_on.then(|| CompParams {
+                threshold_db: strip.comp_threshold_db,
+                ratio: strip.comp_ratio,
+                attack_ms: strip.comp_attack_ms,
+                release_ms: strip.comp_release_ms,
+                makeup_db: strip.comp_makeup_db,
+            }));
         }
         std::mem::replace(&mut m.settings, new.clone())
     };
@@ -1168,5 +1201,27 @@ mod tests {
             cycle += 1;
         }
         assert!(last.1 / b_open > 0.95, "Apps comes back after the hold, got x{}", last.1 / b_open);
+    }
+
+    /// The limiter keeps an output under its ceiling no matter how hot the strips are.
+    #[test]
+    fn the_limiter_holds_a_bus_under_its_ceiling() {
+        let mut mixer = Mixer::new(Arc::new(Shared::new()));
+        mixer.settings = Settings::default();
+        mixer.settings.strips[0].routes = [true, false, false, false, false, false, false, false];
+        mixer.settings.strips[0].gain_db = 12.0;
+        let mut last = 0.0;
+        for cycle in 0..6 {
+            mixer.capture(0, &tone_cycle(cycle));
+            let mut a = vec![0u8; 256 * STRIDE];
+            mixer.playback(0, &mut a);
+            last = loudest(&a);
+            if cycle == 1 {
+                assert!(last > 0.5, "without a limiter the hot strip is loud, got {last}");
+                mixer.settings.buses[0].limiter_on = true;
+                mixer.settings.buses[0].limiter_db = -12.0;
+            }
+        }
+        assert!(last <= db_to_lin(-12.0) + 1e-4, "limited peak should stay under -12 dB, got {last}");
     }
 }

@@ -153,7 +153,9 @@ impl qobject::Mixer {
         let pair = |cells: &[std::sync::atomic::AtomicU32; 2]| [engine::take_peak(&cells[0]), engine::take_peak(&cells[1])];
         let strips: Vec<_> = shared.strip_peaks.iter().map(pair).collect();
         let buses: Vec<_> = shared.bus_peaks.iter().map(pair).collect();
-        let json = serde_json::json!({ "strips": strips, "buses": buses });
+        let comp: Vec<_> = shared.strip_reduction.iter().map(engine::take_peak).collect();
+        let limit: Vec<_> = shared.bus_reduction.iter().map(engine::take_peak).collect();
+        let json = serde_json::json!({ "strips": strips, "buses": buses, "comp": comp, "limit": limit });
         qobject::QString::from(&json.to_string())
     }
 

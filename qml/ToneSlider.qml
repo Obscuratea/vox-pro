@@ -10,6 +10,7 @@ Item {
     property real from: -12
     property real to: 12
     property real resetValue: 0
+    property real step: 0.5
     property var format: value => app.db(value)
     signal moved(real value)
 
@@ -24,7 +25,7 @@ Item {
         return (v - from) / (to - from);
     }
     function clamped(v) {
-        return Math.round(Math.max(from, Math.min(to, v)) * 2) / 2;
+        return Math.round(Math.max(from, Math.min(to, v)) / step) * step;
     }
 
     Text {

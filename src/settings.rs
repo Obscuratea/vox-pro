@@ -39,6 +39,17 @@ pub struct Strip {
     /// Duck what the B mics carry / what the A buses play.
     pub duck_b: bool,
     pub duck_a: bool,
+    /// Three-band EQ (bell filters): frequency and gain of the low, mid and high bands.
+    pub eq_on: bool,
+    pub eq_hz: [f32; 3],
+    pub eq_db: [f32; 3],
+    /// Compressor: evens out loud and quiet parts of the voice.
+    pub comp_on: bool,
+    pub comp_threshold_db: f32,
+    pub comp_ratio: f32,
+    pub comp_attack_ms: f32,
+    pub comp_release_ms: f32,
+    pub comp_makeup_db: f32,
     /// Listen-only solo: while any strip is soloed the A buses play only the soloed strips. The B mics
     /// are unaffected. Not saved: Vox always starts with nothing soloed.
     #[serde(skip_serializing)]
@@ -65,6 +76,15 @@ impl Default for Strip {
             duck_db: -10.0,
             duck_b: true,
             duck_a: false,
+            eq_on: false,
+            eq_hz: [250.0, 1000.0, 3500.0],
+            eq_db: [0.0; 3],
+            comp_on: false,
+            comp_threshold_db: -18.0,
+            comp_ratio: 3.0,
+            comp_attack_ms: 10.0,
+            comp_release_ms: 120.0,
+            comp_makeup_db: 0.0,
             solo: false,
         }
     }
@@ -80,11 +100,22 @@ pub struct Bus {
     pub device: String,
     pub gain_db: f32,
     pub mute: bool,
+    /// Brickwall limiter: nothing leaves this output louder than `limiter_db`.
+    pub limiter_on: bool,
+    pub limiter_db: f32,
 }
 
 impl Default for Bus {
     fn default() -> Self {
-        Self { label: String::new(), virtual_output: false, device: String::new(), gain_db: 0.0, mute: false }
+        Self {
+            label: String::new(),
+            virtual_output: false,
+            device: String::new(),
+            gain_db: 0.0,
+            mute: false,
+            limiter_on: false,
+            limiter_db: -1.0,
+        }
     }
 }
 
@@ -190,11 +221,21 @@ impl Settings {
             strip.pitch_semitones = strip.pitch_semitones.clamp(-12.0, 12.0);
             strip.duck_threshold_db = strip.duck_threshold_db.clamp(-80.0, -6.0);
             strip.duck_db = strip.duck_db.clamp(-30.0, 0.0);
+            for i in 0..3 {
+                strip.eq_hz[i] = strip.eq_hz[i].clamp(40.0, 12_000.0);
+                strip.eq_db[i] = strip.eq_db[i].clamp(-12.0, 12.0);
+            }
+            strip.comp_threshold_db = strip.comp_threshold_db.clamp(-60.0, 0.0);
+            strip.comp_ratio = strip.comp_ratio.clamp(1.0, 20.0);
+            strip.comp_attack_ms = strip.comp_attack_ms.clamp(0.5, 200.0);
+            strip.comp_release_ms = strip.comp_release_ms.clamp(10.0, 1000.0);
+            strip.comp_makeup_db = strip.comp_makeup_db.clamp(0.0, 24.0);
         }
         for (bus, d) in s.buses.iter_mut().zip(&defaults.buses) {
             bus.virtual_output = d.virtual_output;
             bus.label = d.label.clone();
             bus.gain_db = bus.gain_db.clamp(-60.0, 12.0);
+            bus.limiter_db = bus.limiter_db.clamp(-24.0, 0.0);
         }
         s.scenes.truncate(MAX_SCENES);
         s

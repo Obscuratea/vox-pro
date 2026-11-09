@@ -10,6 +10,8 @@ Rectangle {
     readonly property var bus: app.cfg.buses[busIndex]
     readonly property var peaks: app.meters.buses && app.meters.buses[busIndex] ? app.meters.buses[busIndex] : [0, 0]
 
+    readonly property real reduction: app.meters.limit ? (app.meters.limit[busIndex] || 0) : 0
+
     color: app.diamond ? "transparent" : app.panelFill
     radius: app.rCard
     border.color: app.diamond ? "transparent" : app.edge
@@ -75,6 +77,27 @@ Rectangle {
                 color: row.app.ink
                 font.family: row.app.mono
                 font.pixelSize: 12
+            }
+        }
+        RowLayout {
+            spacing: 8
+            Chip {
+                app: row.app
+                text: row.app.t("Limiter")
+                checked: !!row.bus.limiter_on
+                tip: "Nothing leaves this output louder than the ceiling, so a sudden loud sound can't blast or clip"
+                onToggled: row.set(b => b.limiter_on = !b.limiter_on)
+            }
+            ToneSlider {
+                Layout.fillWidth: true
+                app: row.app
+                enabled: !!row.bus.limiter_on
+                label: row.reduction > 0.1 ? "Limiting " + row.reduction.toFixed(1) + " dB" : "Ceiling"
+                from: -24
+                to: 0
+                resetValue: -1
+                value: row.bus.limiter_db
+                onMoved: v => row.set(b => b.limiter_db = v)
             }
         }
         // A virtual mic also shows which programs are recording from it.

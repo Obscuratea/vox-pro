@@ -26,7 +26,24 @@
    "duck_threshold_db": -40.0,
    "duck_db": -10.0,
    "duck_b": true,
-   "duck_a": false
+   "duck_a": false,
+   "eq_on": true,
+   "eq_hz": [
+    250,
+    1000,
+    3500
+   ],
+   "eq_db": [
+    -2,
+    0,
+    3
+   ],
+   "comp_on": true,
+   "comp_threshold_db": -18,
+   "comp_ratio": 3,
+   "comp_attack_ms": 10,
+   "comp_release_ms": 120,
+   "comp_makeup_db": 0
   },
   {
    "label": "Input 2",
@@ -54,7 +71,24 @@
    "duck_threshold_db": -40.0,
    "duck_db": -10.0,
    "duck_b": true,
-   "duck_a": false
+   "duck_a": false,
+   "eq_on": false,
+   "eq_hz": [
+    250,
+    1000,
+    3500
+   ],
+   "eq_db": [
+    0,
+    0,
+    0
+   ],
+   "comp_on": false,
+   "comp_threshold_db": -18,
+   "comp_ratio": 3,
+   "comp_attack_ms": 10,
+   "comp_release_ms": 120,
+   "comp_makeup_db": 0
   },
   {
    "label": "Input 3",
@@ -82,7 +116,24 @@
    "duck_threshold_db": -40.0,
    "duck_db": -10.0,
    "duck_b": true,
-   "duck_a": false
+   "duck_a": false,
+   "eq_on": false,
+   "eq_hz": [
+    250,
+    1000,
+    3500
+   ],
+   "eq_db": [
+    0,
+    0,
+    0
+   ],
+   "comp_on": false,
+   "comp_threshold_db": -18,
+   "comp_ratio": 3,
+   "comp_attack_ms": 10,
+   "comp_release_ms": 120,
+   "comp_makeup_db": 0
   },
   {
    "label": "Apps",
@@ -110,7 +161,24 @@
    "duck_threshold_db": -40.0,
    "duck_db": -10.0,
    "duck_b": true,
-   "duck_a": false
+   "duck_a": false,
+   "eq_on": false,
+   "eq_hz": [
+    250,
+    1000,
+    3500
+   ],
+   "eq_db": [
+    0,
+    0,
+    0
+   ],
+   "comp_on": false,
+   "comp_threshold_db": -18,
+   "comp_ratio": 3,
+   "comp_attack_ms": 10,
+   "comp_release_ms": 120,
+   "comp_makeup_db": 0
   },
   {
    "label": "Media",
@@ -138,7 +206,24 @@
    "duck_threshold_db": -40.0,
    "duck_db": -10.0,
    "duck_b": true,
-   "duck_a": false
+   "duck_a": false,
+   "eq_on": false,
+   "eq_hz": [
+    250,
+    1000,
+    3500
+   ],
+   "eq_db": [
+    0,
+    0,
+    0
+   ],
+   "comp_on": false,
+   "comp_threshold_db": -18,
+   "comp_ratio": 3,
+   "comp_attack_ms": 10,
+   "comp_release_ms": 120,
+   "comp_makeup_db": 0
   },
   {
    "label": "Game",
@@ -166,7 +251,24 @@
    "duck_threshold_db": -40.0,
    "duck_db": -10.0,
    "duck_b": true,
-   "duck_a": false
+   "duck_a": false,
+   "eq_on": false,
+   "eq_hz": [
+    250,
+    1000,
+    3500
+   ],
+   "eq_db": [
+    0,
+    0,
+    0
+   ],
+   "comp_on": false,
+   "comp_threshold_db": -18,
+   "comp_ratio": 3,
+   "comp_attack_ms": 10,
+   "comp_release_ms": 120,
+   "comp_makeup_db": 0
   },
   {
    "label": "Chat",
@@ -194,7 +296,24 @@
    "duck_threshold_db": -40.0,
    "duck_db": -10.0,
    "duck_b": true,
-   "duck_a": false
+   "duck_a": false,
+   "eq_on": false,
+   "eq_hz": [
+    250,
+    1000,
+    3500
+   ],
+   "eq_db": [
+    0,
+    0,
+    0
+   ],
+   "comp_on": false,
+   "comp_threshold_db": -18,
+   "comp_ratio": 3,
+   "comp_attack_ms": 10,
+   "comp_release_ms": 120,
+   "comp_makeup_db": 0
   },
   {
    "label": "Browser",
@@ -222,7 +341,24 @@
    "duck_threshold_db": -40.0,
    "duck_db": -10.0,
    "duck_b": true,
-   "duck_a": false
+   "duck_a": false,
+   "eq_on": false,
+   "eq_hz": [
+    250,
+    1000,
+    3500
+   ],
+   "eq_db": [
+    0,
+    0,
+    0
+   ],
+   "comp_on": false,
+   "comp_threshold_db": -18,
+   "comp_ratio": 3,
+   "comp_attack_ms": 10,
+   "comp_release_ms": 120,
+   "comp_makeup_db": 0
   }
  ],
  "buses": [
@@ -231,56 +367,72 @@
    "virtual_output": false,
    "device": "",
    "gain_db": 0.0,
-   "mute": false
+   "mute": false,
+   "limiter_on": true,
+   "limiter_db": -1
   },
   {
    "label": "A2",
    "virtual_output": false,
    "device": "",
    "gain_db": 0.0,
-   "mute": false
+   "mute": false,
+   "limiter_on": false,
+   "limiter_db": -1
   },
   {
    "label": "A3",
    "virtual_output": false,
    "device": "",
    "gain_db": 0.0,
-   "mute": false
+   "mute": false,
+   "limiter_on": false,
+   "limiter_db": -1
   },
   {
    "label": "A4",
    "virtual_output": false,
    "device": "",
    "gain_db": 0.0,
-   "mute": false
+   "mute": false,
+   "limiter_on": false,
+   "limiter_db": -1
   },
   {
    "label": "A5",
    "virtual_output": false,
    "device": "",
    "gain_db": 0.0,
-   "mute": false
+   "mute": false,
+   "limiter_on": false,
+   "limiter_db": -1
   },
   {
    "label": "B1",
    "virtual_output": true,
    "device": "",
    "gain_db": 0.0,
-   "mute": false
+   "mute": false,
+   "limiter_on": false,
+   "limiter_db": -1
   },
   {
    "label": "B2",
    "virtual_output": true,
    "device": "",
    "gain_db": 0.0,
-   "mute": false
+   "mute": false,
+   "limiter_on": false,
+   "limiter_db": -1
   },
   {
    "label": "B3",
    "virtual_output": true,
    "device": "",
    "gain_db": 0.0,
-   "mute": false
+   "mute": false,
+   "limiter_on": false,
+   "limiter_db": -1
   }
  ],
  "theme": "default",

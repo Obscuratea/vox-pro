@@ -484,7 +484,7 @@ ApplicationWindow {
                             app: win
                             Layout.fillWidth: true
                             Layout.preferredWidth: 212
-                            Layout.preferredHeight: 176
+                            Layout.preferredHeight: 232
                         }
                     }
                 }
