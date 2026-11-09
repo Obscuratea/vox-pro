@@ -80,6 +80,23 @@ ApplicationWindow {
     readonly property string display: soft ? "Roboto Flex" : diamond ? "Geist Mono" : "Archivo"
 
     Mixer { id: mixer }
+    readonly property string version: mixer.version()
+    function licensesText() { return mixer.licenses(); }
+
+    // Updates (see updater.rs): the state is polled while anything is going on, and once at launch if allowed.
+    property var update: ({ state: "idle", current: "", latest: "", notes: "", progress: 0, message: "" })
+    function checkForUpdate() { mixer.updateCheck(); }
+    function installUpdate() { mixer.updateInstall(); }
+    function restartAfterUpdate() { mixer.updateRestart(); quitApp(); }
+    Timer {
+        interval: 700; repeat: true; running: win.awake
+        onTriggered: {
+            const json = mixer.updateStatus();
+            if (json !== win.updateJson) { win.updateJson = json; win.update = JSON.parse(json); }
+        }
+    }
+    property string updateJson: ""
+    Component.onCompleted: if (cfg.check_updates !== false && Qt.application.arguments.indexOf("--screenshot") < 0) mixer.updateCheck()
 
     // Picture background (Settings > Background). `--bg <file>` is a dev aid for screenshots.
     readonly property int bgArg: Qt.application.arguments.indexOf("--bg")
@@ -587,6 +604,15 @@ ApplicationWindow {
                 text: rightSide.showingBack ? "Done  ⟲" : "⚙"
                 tip: rightSide.showingBack ? "Back to the mixer" : "Settings and themes"
                 onClicked: rightSide.turn = rightSide.showingBack ? 0 : 180
+
+                // A small dot on the gear while a newer version is waiting.
+                Rectangle {
+                    visible: !rightSide.showingBack && win.update.state === "available"
+                    x: parent.width - 9; y: -1
+                    width: 10; height: 10; radius: 5
+                    color: win.accent
+                    border.width: 2; border.color: win.bg
+                }
             }
         }
 

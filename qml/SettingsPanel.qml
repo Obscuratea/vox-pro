@@ -467,5 +467,187 @@ ColumnLayout {
             }
         }
     }
+
+    // ---- About ----
+    Text {
+        Layout.topMargin: 10
+        text: panel.app.t("About")
+        color: panel.app.dim
+        font.family: panel.app.mono
+        font.pixelSize: 10
+        font.letterSpacing: 1
+    }
+    Rectangle {
+        id: aboutBox
+        property bool open: Qt.application.arguments.indexOf("--licences") >= 0   // --licences is a dev aid for screenshots
+        Layout.fillWidth: true
+        Layout.preferredHeight: aboutColumn.implicitHeight + 24
+        radius: panel.app.rBox
+        color: panel.app.panelFill
+        border.color: panel.app.soft ? panel.app.controlEdge : panel.app.line
+        ColumnLayout {
+            id: aboutColumn
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 12
+            spacing: 10
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+                    Text { text: "Vox Pro " + panel.app.version; color: panel.app.ink; font.pixelSize: 13; font.weight: Font.DemiBold }
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Free to use. If it helps you, you can support its development."
+                        color: panel.app.dim
+                        font.pixelSize: 11
+                        wrapMode: Text.WordWrap
+                    }
+                }
+                TextButton { app: panel.app; text: "Ko-fi"; tip: "ko-fi.com/obscuratea"; onClicked: Qt.openUrlExternally("https://ko-fi.com/obscuratea") }
+                TextButton { app: panel.app; text: "Patreon"; tip: "patreon.com/Obscuratea"; onClicked: Qt.openUrlExternally("https://patreon.com/Obscuratea") }
+            }
+            // ---- Updates ----
+            Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: panel.app.soft ? "transparent" : panel.app.line }
+            RowLayout {
+                id: updateRow
+                readonly property var u: panel.app.update
+                readonly property bool busy: u.state === "checking" || u.state === "downloading" || u.state === "installing"
+                Layout.fillWidth: true
+                spacing: 12
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+                    Text {
+                        Layout.fillWidth: true
+                        color: updateRow.u.state === "error" ? panel.app.danger : panel.app.ink
+                        font.pixelSize: 13
+                        font.weight: Font.DemiBold
+                        wrapMode: Text.WordWrap
+                        text: ({ idle: "Updates", checking: "Checking for updates...", uptodate: "Up to date",
+                                 available: "Version " + updateRow.u.latest + " is available", downloading: "Downloading " + updateRow.u.latest + "...",
+                                 installing: "Installing...", installed: "Updated to " + updateRow.u.latest, error: "Couldn't update" })[updateRow.u.state] || "Updates"
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        visible: text !== ""
+                        text: updateRow.u.state === "available" ? "Your settings are kept. You will be asked for your password to install." : updateRow.u.message
+                        color: panel.app.dim
+                        font.pixelSize: 11
+                        wrapMode: Text.WordWrap
+                    }
+                    Rectangle {
+                        visible: updateRow.u.state === "downloading"
+                        Layout.fillWidth: true
+                        Layout.topMargin: 4
+                        Layout.preferredHeight: 6
+                        radius: 3
+                        color: panel.app.hover
+                        Rectangle {
+                            width: parent.width * updateRow.u.progress / 100
+                            height: parent.height
+                            radius: 3
+                            color: panel.app.accent
+                        }
+                    }
+                }
+                TextButton {
+                    visible: !updateRow.busy && updateRow.u.state !== "available" && updateRow.u.state !== "installed"
+                    app: panel.app
+                    text: updateRow.u.state === "error" ? "Try again" : "Check for updates"
+                    onClicked: panel.app.checkForUpdate()
+                }
+                TextButton {
+                    visible: updateRow.u.state === "available"
+                    app: panel.app
+                    text: "Update to " + updateRow.u.latest
+                    tip: "Downloads the new version, checks it and installs it. Your settings are not touched."
+                    onClicked: panel.app.installUpdate()
+                }
+                TextButton {
+                    visible: updateRow.u.state === "installed"
+                    app: panel.app
+                    text: "Restart now"
+                    onClicked: panel.app.restartAfterUpdate()
+                }
+            }
+            Text {
+                visible: updateRow.u.state === "available" && updateRow.u.notes !== ""
+                Layout.fillWidth: true
+                text: updateRow.u.notes
+                color: panel.app.dim
+                font.pixelSize: 11
+                wrapMode: Text.WordWrap
+                maximumLineCount: 8
+                elide: Text.ElideRight
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                Text {
+                    Layout.fillWidth: true
+                    text: "Look for a new version when Vox starts (one request to GitHub, nothing else is sent)."
+                    color: panel.app.dim
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                }
+                Chip {
+                    app: panel.app
+                    text: checked ? panel.app.t("On") : panel.app.t("Off")
+                    checked: panel.app.cfg.check_updates !== false
+                    onToggled: panel.app.change(c => c.check_updates = !(c.check_updates !== false))
+                }
+            }
+            Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: panel.app.soft ? "transparent" : panel.app.line }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                Text {
+                    Layout.fillWidth: true
+                    text: "Credits and licences of the free software Vox Pro is built on (including Qt and SoundTouch, under the LGPL)."
+                    color: panel.app.dim
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                }
+                Chip {
+                    app: panel.app
+                    text: aboutBox.open ? panel.app.t("Hide") : panel.app.t("Show")
+                    checked: aboutBox.open
+                    onToggled: aboutBox.open = !aboutBox.open
+                }
+            }
+            Rectangle {
+                visible: aboutBox.open
+                Layout.fillWidth: true
+                Layout.preferredHeight: 280
+                radius: panel.app.rBox
+                color: "transparent"
+                border.color: panel.app.soft ? panel.app.controlEdge : panel.app.line
+                clip: true
+                Flickable {
+                    id: licenceView
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    contentWidth: width
+                    contentHeight: licenceText.implicitHeight
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded; width: 6 }
+                    Text {
+                        id: licenceText
+                        width: licenceView.width - 12
+                        text: aboutBox.open ? panel.app.licensesText() : ""
+                        color: panel.app.ink
+                        font.family: "monospace"
+                        font.pixelSize: 11
+                        wrapMode: Text.WordWrap
+                        textFormat: Text.PlainText
+                    }
+                }
+            }
+        }
+    }
 }
 }

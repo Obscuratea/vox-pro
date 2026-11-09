@@ -52,6 +52,27 @@ pub mod qobject {
         #[cxx_name = "engineStatus"]
         fn engine_status(self: &Mixer) -> QString;
 
+        // The program's version, and the text of THIRD_PARTY.txt (the credits and licences shown in About).
+        #[qinvokable]
+        fn version(self: &Mixer) -> QString;
+        #[qinvokable]
+        fn licenses(self: &Mixer) -> QString;
+
+        // Updates: `updateStatus` is JSON ({state, current, latest, notes, progress, message}); the other
+        // three start work on a thread. See updater.rs.
+        #[qinvokable]
+        #[cxx_name = "updateStatus"]
+        fn update_status(self: &Mixer) -> QString;
+        #[qinvokable]
+        #[cxx_name = "updateCheck"]
+        fn update_check(self: &Mixer);
+        #[qinvokable]
+        #[cxx_name = "updateInstall"]
+        fn update_install(self: &Mixer);
+        #[qinvokable]
+        #[cxx_name = "updateRestart"]
+        fn update_restart(self: &Mixer);
+
         // The scheme's accent (its window focus colour) as "#rrggbb", or "" if it can't be read.
         #[qinvokable]
         #[cxx_name = "schemeAccent"]
@@ -135,6 +156,30 @@ pub struct MixerRust;
 impl qobject::Mixer {
     fn settings(&self) -> qobject::QString {
         qobject::QString::from(&state().current.lock().unwrap().to_json())
+    }
+
+    fn version(&self) -> qobject::QString {
+        qobject::QString::from(env!("CARGO_PKG_VERSION"))
+    }
+
+    fn licenses(&self) -> qobject::QString {
+        qobject::QString::from(include_str!("../THIRD_PARTY.txt"))
+    }
+
+    fn update_status(&self) -> qobject::QString {
+        qobject::QString::from(&crate::updater::status_json())
+    }
+
+    fn update_check(&self) {
+        crate::updater::check();
+    }
+
+    fn update_install(&self) {
+        crate::updater::install();
+    }
+
+    fn update_restart(&self) {
+        crate::updater::restart();
     }
 
     fn devices(&self) -> qobject::QString {

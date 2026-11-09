@@ -6,6 +6,7 @@ mod recorder;
 mod settings;
 mod shortcuts;
 mod stretch;
+mod updater;
 
 use cxx_qt_lib::{QQmlApplicationEngine, QUrl};
 use std::ffi::{CString, c_char};

@@ -153,9 +153,16 @@ pub struct Settings {
     /// What recordings are saved as: "wav" (32-bit float), "flac" (24-bit lossless) or "opus" (128 kbps).
     #[serde(default = "default_format")]
     pub record_format: String,
+    /// Look for a newer version once at launch (one request to GitHub).
+    #[serde(default = "yes")]
+    pub check_updates: bool,
     /// Closing the window leaves Vox running in the tray.
     #[serde(default)]
     pub close_to_tray: bool,
+}
+
+fn yes() -> bool {
+    true
 }
 
 fn default_format() -> String {
@@ -199,6 +206,7 @@ impl Default for Settings {
             scenes: Vec::new(),
             ptt_enabled: false,
             record_format: default_format(),
+            check_updates: true,
             close_to_tray: false,
         }
     }
