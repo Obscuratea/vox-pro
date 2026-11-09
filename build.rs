@@ -1,6 +1,15 @@
 use cxx_qt_build::{CxxQtBuilder, QmlModule};
 
 fn main() {
+    // A QML file missing from the list below only fails at run time ("X is not a type"), so catch it here.
+    let listed = include_str!("build.rs");
+    for entry in std::fs::read_dir("qml").unwrap().flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name.ends_with(".qml") && !listed.contains(&format!("\"qml/{name}\"")) {
+            panic!("qml/{name} is not in build.rs's qml_files list");
+        }
+    }
+
     CxxQtBuilder::new_qml_module(QmlModule::new("org.obscura.vox").qml_files([
         "qml/Main.qml",
         "qml/StripCard.qml",
@@ -18,6 +27,8 @@ fn main() {
         "qml/SettingsPanel.qml",
         "qml/KeyCapture.qml",
         "qml/Tray.qml",
+        "qml/EqPanel.qml",
+        "qml/DynamicsPanel.qml",
     ]))
     .file("src/bridge.rs")
     .build();
