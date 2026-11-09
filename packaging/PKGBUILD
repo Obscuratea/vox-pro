@@ -2,7 +2,7 @@
 # Lives in packaging/ so makepkg's src/ and pkg/ scratch folders never touch the Rust src/.
 pkgname=vox-pro
 pkgver=0.1.0
-pkgrel=8
+pkgrel=9
 pkgdesc='Voice and audio mixer for PipeWire, with 8 strips, EQ, compressors, limiters and recording (Voicemeeter Potato style)'
 arch=('x86_64')
 license=('custom')

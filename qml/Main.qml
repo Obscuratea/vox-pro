@@ -96,7 +96,11 @@ ApplicationWindow {
         }
     }
     property string updateJson: ""
-    Component.onCompleted: if (cfg.check_updates !== false && Qt.application.arguments.indexOf("--screenshot") < 0) mixer.updateCheck()
+    Component.onCompleted: {
+        // Dev aid: a screenshot only captures `page`, so --licences moves the dialog layer into it.
+        if (Qt.application.arguments.indexOf("--licences") >= 0) Overlay.overlay.parent = page
+        if (cfg.check_updates !== false && Qt.application.arguments.indexOf("--screenshot") < 0) mixer.updateCheck()
+    }
 
     // Picture background (Settings > Background). `--bg <file>` is a dev aid for screenshots.
     readonly property int bgArg: Qt.application.arguments.indexOf("--bg")

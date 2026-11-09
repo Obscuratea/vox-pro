@@ -479,7 +479,6 @@ ColumnLayout {
     }
     Rectangle {
         id: aboutBox
-        property bool open: Qt.application.arguments.indexOf("--licences") >= 0   // --licences is a dev aid for screenshots
         Layout.fillWidth: true
         Layout.preferredHeight: aboutColumn.implicitHeight + 24
         radius: panel.app.rBox
@@ -501,7 +500,7 @@ ColumnLayout {
                     Text { text: "Vox Pro " + panel.app.version; color: panel.app.ink; font.pixelSize: 13; font.weight: Font.DemiBold }
                     Text {
                         Layout.fillWidth: true
-                        text: "Free to use. If it helps you, you can support its development."
+                        text: "Support its development."
                         color: panel.app.dim
                         font.pixelSize: 11
                         wrapMode: Text.WordWrap
@@ -534,7 +533,7 @@ ColumnLayout {
                     Text {
                         Layout.fillWidth: true
                         visible: text !== ""
-                        text: updateRow.u.state === "available" ? "Your settings are kept. You will be asked for your password to install." : updateRow.u.message
+                        text: updateRow.u.state === "error" ? updateRow.u.message : ""
                         color: panel.app.dim
                         font.pixelSize: 11
                         wrapMode: Text.WordWrap
@@ -589,9 +588,10 @@ ColumnLayout {
                 spacing: 12
                 Text {
                     Layout.fillWidth: true
-                    text: "Look for a new version when Vox starts (one request to GitHub, nothing else is sent)."
-                    color: panel.app.dim
-                    font.pixelSize: 11
+                    text: "Auto-check for updates"
+                    color: panel.app.ink
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
                     wrapMode: Text.WordWrap
                 }
                 Chip {
@@ -607,44 +607,68 @@ ColumnLayout {
                 spacing: 12
                 Text {
                     Layout.fillWidth: true
-                    text: "Credits and licences of the free software Vox Pro is built on (including Qt and SoundTouch, under the LGPL)."
-                    color: panel.app.dim
-                    font.pixelSize: 11
-                    wrapMode: Text.WordWrap
+                    text: "Credits and Licenses"
+                    color: panel.app.ink
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
                 }
-                Chip {
+                TextButton {
                     app: panel.app
-                    text: aboutBox.open ? panel.app.t("Hide") : panel.app.t("Show")
-                    checked: aboutBox.open
-                    onToggled: aboutBox.open = !aboutBox.open
+                    text: "Show"
+                    onClicked: licencePopup.open()
                 }
             }
-            Rectangle {
-                visible: aboutBox.open
+        }
+    }
+
+    Popup {
+        id: licencePopup
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        width: Math.min(parent.width - 32, 640)
+        height: Math.min(parent.height - 32, 600)
+        modal: true
+        focus: true
+        padding: 16
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        Component.onCompleted: if (Qt.application.arguments.indexOf("--licences") >= 0) Qt.callLater(open)   // dev aid for screenshots
+        Overlay.modal: Rectangle { color: Qt.rgba(0, 0, 0, 0.55) }
+        background: Rectangle {
+            radius: panel.app.rBox
+            color: panel.app.bg
+            border.color: panel.app.soft ? panel.app.controlEdge : panel.app.line
+        }
+        contentItem: ColumnLayout {
+            spacing: 10
+            RowLayout {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 280
-                radius: panel.app.rBox
-                color: "transparent"
-                border.color: panel.app.soft ? panel.app.controlEdge : panel.app.line
+                Text {
+                    Layout.fillWidth: true
+                    text: "Credits and Licenses"
+                    color: panel.app.ink
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                }
+                TextButton { app: panel.app; text: "Close"; onClicked: licencePopup.close() }
+            }
+            Flickable {
+                id: licenceView
+                Layout.fillWidth: true
+                Layout.fillHeight: true
                 clip: true
-                Flickable {
-                    id: licenceView
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    contentWidth: width
-                    contentHeight: licenceText.implicitHeight
-                    boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded; width: 6 }
-                    Text {
-                        id: licenceText
-                        width: licenceView.width - 12
-                        text: aboutBox.open ? panel.app.licensesText() : ""
-                        color: panel.app.ink
-                        font.family: "monospace"
-                        font.pixelSize: 11
-                        wrapMode: Text.WordWrap
-                        textFormat: Text.PlainText
-                    }
+                contentWidth: width
+                contentHeight: licenceText.implicitHeight
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded; width: 6 }
+                Text {
+                    id: licenceText
+                    width: licenceView.width - 12
+                    text: licencePopup.visible ? panel.app.licensesText() : ""
+                    color: panel.app.ink
+                    font.family: "monospace"
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.PlainText
                 }
             }
         }
