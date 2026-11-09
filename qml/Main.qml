@@ -6,10 +6,10 @@ import org.obscura.vox
 
 ApplicationWindow {
     id: win
-    width: 1840
-    height: 960
-    minimumWidth: 1300
-    minimumHeight: 720
+    width: 1900
+    height: 1020
+    minimumWidth: 1500
+    minimumHeight: 860
     visible: true
     title: "Vox Pro"
     color: bg
@@ -393,24 +393,31 @@ ApplicationWindow {
             }
         }
 
-        ColumnLayout {
+        // The whole window flips between the mixer and the settings (gear button, bottom right).
+        Item {
+            id: rightSide
             anchors.fill: parent
             anchors.margins: 24
-            spacing: 18
 
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                spacing: 24
+            property real turn: Qt.application.arguments.indexOf("--settings") >= 0 ? 180 : 0   // --settings is a dev aid for screenshots
+            readonly property bool showingBack: turn >= 90
+            Behavior on turn { NumberAnimation { duration: 380; easing.type: Easing.InOutCubic } }
+            transform: Rotation {
+                origin.x: rightSide.width / 2
+                origin.y: rightSide.height / 2
+                axis { x: 0; y: 1; z: 0 }
+                angle: rightSide.turn < 90 ? rightSide.turn : rightSide.turn - 180
+            }
 
-                ColumnLayout {
-                    Layout.fillHeight: true
-                    spacing: 12
+            ColumnLayout {
+                visible: !rightSide.showingBack
+                anchors.fill: parent
+                spacing: 12
 
-                    // The chips are a little taller than the label; the box keeps the label's height so the strips don't move.
-                    Item {
-                        Layout.preferredWidth: 8 * 160 + 7 * 10   // as wide as the eight strips under it
-                        Layout.preferredHeight: 14
+                // The chips are a little taller than the label; the box keeps the label's height so the strips don't move.
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 14
                     RowLayout {
                         anchors.left: parent.left
                         anchors.right: parent.right
@@ -441,198 +448,110 @@ ApplicationWindow {
                             }
                         }
                     }
-                    }
-                    RowLayout {
-                        Layout.fillHeight: true
-                        spacing: 10
-                        Repeater {
-                            model: 8
-                            StripCard {
-                                app: win
-                                Layout.fillHeight: true
-                                Layout.preferredWidth: 160
-                            }
-                        }
-                    }
                 }
-
-                Rectangle { Layout.fillHeight: true; Layout.preferredWidth: 1; color: win.soft ? "transparent" : win.line }
-
-                // The right-hand side flips to the settings (gear button, bottom right) and back.
-                Item {
-                    id: rightSide
+                RowLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-
-                    property real turn: Qt.application.arguments.indexOf("--settings") >= 0 ? 180 : 0   // --settings is a dev aid for screenshots
-                    readonly property bool showingBack: turn >= 90
-                    Behavior on turn { NumberAnimation { duration: 380; easing.type: Easing.InOutCubic } }
-                    transform: Rotation {
-                        origin.x: rightSide.width / 2
-                        origin.y: rightSide.height / 2
-                        axis { x: 0; y: 1; z: 0 }
-                        angle: rightSide.turn < 90 ? rightSide.turn : rightSide.turn - 180
-                    }
-
-                    ColumnLayout {
-                        visible: !rightSide.showingBack
-                        anchors.fill: parent
-                        spacing: 10
-
-                        Text {
-                            text: win.sectionLabel("02", "Listen  ·  A")
-                            color: win.dim
-                            textFormat: Text.StyledText
-                            font.family: win.mono
-                            font.pixelSize: win.soft ? 12 : 11
-                            font.weight: win.soft ? Font.Medium : Font.Normal
-                            font.letterSpacing: win.soft || win.diamond ? 0.3 : 2
-                        }
-                        Repeater {
-                            model: 5
-                            BusRow { app: win; Layout.fillWidth: true }
-                        }
-
-                        Item { Layout.preferredHeight: 8 }
-
-                        Text {
-                            text: win.sectionLabel("03", "Send as mic  ·  B")
-                            color: win.dim
-                            textFormat: Text.StyledText
-                            font.family: win.mono
-                            font.pixelSize: win.soft ? 12 : 11
-                            font.weight: win.soft ? Font.Medium : Font.Normal
-                            font.letterSpacing: win.soft || win.diamond ? 0.3 : 2
-                        }
-                        Repeater {
-                            model: 3
-                            BusRow { app: win; offset: 5; Layout.fillWidth: true }
-                        }
-
-                        Item { Layout.preferredHeight: 8 }
-
-                        Rectangle {
-                            Layout.fillWidth: true
+                    spacing: 12
+                    Repeater {
+                        model: 8
+                        StripCard {
+                            app: win
                             Layout.fillHeight: true
-                            Layout.minimumHeight: 110
-                            color: win.diamond ? "transparent" : win.panelFill
-                            radius: win.rCard
-                            border.color: win.diamond ? "transparent" : win.edge
-
-                            Glass { app: win; radius: win.rCard }
-                            CutFrame { visible: win.diamond; anchors.fill: parent; cut: win.cut; fill: win.panelFill; stroke: win.frameDim }
-
-                            ColumnLayout {
-                                anchors.fill: parent
-                                anchors.margins: 12
-                                spacing: 10
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    Text {
-                                        Layout.fillWidth: true
-                                        text: win.t("Used by")
-                                        color: win.dim
-                                        font.family: win.mono
-                                        font.pixelSize: 10
-                                        font.letterSpacing: 1
-                                    }
-                                    Chip {
-                                        app: win
-                                        text: win.micsMuted ? win.t("Mics muted") : win.t("Mute all mics")
-                                        checked: win.micsMuted
-                                        onColor: win.danger
-                                        tip: "Mutes B1, B2 and B3 together, so nobody on a call or stream hears you"
-                                        onToggled: win.muteMics(!win.micsMuted)
-                                    }
-                                }
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    Layout.fillHeight: true
-                                    spacing: 10
-                                    Repeater {
-                                        model: ["b1", "b2", "b3"]
-                                        ColumnLayout {
-                                            required property string modelData
-                                            Layout.fillWidth: true
-                                            Layout.fillHeight: true
-                                            spacing: 6
-                                            Text {
-                                                text: modelData.toUpperCase()
-                                                color: win.accent
-                                                font.family: win.mono
-                                                font.pixelSize: 12
-                                                font.weight: Font.Bold
-                                            }
-                                            StreamList {
-                                                Layout.fillWidth: true
-                                                Layout.fillHeight: true
-                                                app: win
-                                                target: modelData
-                                                mutable: false
-                                                emptyText: "Nobody is using this mic"
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Result of the two buttons below, right above them.
-                                Rectangle {
-                                    visible: win.status !== "" || win.engineError !== ""
-                                    Layout.alignment: Qt.AlignRight
-                                    implicitWidth: statusText.implicitWidth + 24
-                                    implicitHeight: 24
-                                    radius: win.diamond ? 0 : 12
-                                    color: Qt.alpha(win.engineError !== "" ? win.danger : win.accent, 0.15)
-                                    border.color: win.soft ? "transparent" : (win.engineError !== "" ? win.danger : win.accent)
-                                    Text {
-                                        id: statusText
-                                        anchors.centerIn: parent
-                                        text: win.engineError !== "" ? win.engineError : win.status
-                                        color: win.engineError !== "" ? win.danger : win.accent
-                                        font.pixelSize: 12
-                                    }
-                                }
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 6
-                                    Item { Layout.fillWidth: true }
-                                    TextButton {
-                                        app: win
-                                        text: win.diamond ? "use as system output" : "Use as system output"
-                                        tip: "Programs play into the Apps strip, like setting Voicemeeter as your Windows output"
-                                        onClicked: win.makeDefault("vox_pro_apps", "System output is now Vox Pro Apps.")
-                                    }
-                                    TextButton {
-                                        app: win
-                                        text: win.diamond ? "use b1 as system mic" : "Use B1 as system mic"
-                                        tip: "Programs that use the default microphone hear B1"
-                                        onClicked: win.makeDefault("vox_pro_b1", "System microphone is now Vox Pro B1.")
-                                    }
-                                    Item { Layout.preferredWidth: 30; Layout.preferredHeight: 32 }   // the gear sits here
-                                }
-                            }
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 212
                         }
-                    }
-
-                    SettingsPanel {
-                        visible: rightSide.showingBack
-                        anchors.fill: parent
-                        app: win
-                    }
-
-                    // Same spot on both faces, so the gear and "Done" are one click apart.
-                    TextButton {
-                        anchors.right: parent.right
-                        anchors.bottom: parent.bottom
-                        anchors.margins: 12
-                        width: rightSide.showingBack ? implicitWidth : 30
-                        app: win
-                        text: rightSide.showingBack ? "Done  ⟲" : "⚙"
-                        tip: rightSide.showingBack ? "Back to the mixer" : "Settings and themes"
-                        onClicked: rightSide.turn = rightSide.showingBack ? 0 : 180
                     }
                 }
+
+                Item { Layout.preferredHeight: 2 }
+                Text {
+                    text: win.sectionLabel("02", "Outputs  ·  A listen  ·  B send as mic")
+                    color: win.dim
+                    textFormat: Text.StyledText
+                    font.family: win.mono
+                    font.pixelSize: win.soft ? 12 : 11
+                    font.weight: win.soft ? Font.Medium : Font.Normal
+                    font.letterSpacing: win.soft || win.diamond ? 0.3 : 2
+                }
+                // One card per output, in the same columns as the strips above.
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    Repeater {
+                        model: 8
+                        BusRow {
+                            app: win
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: 212
+                            Layout.preferredHeight: 176
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Rectangle {
+                        visible: win.status !== "" || win.engineError !== ""
+                        implicitWidth: statusText.implicitWidth + 24
+                        implicitHeight: 24
+                        radius: win.diamond ? 0 : 12
+                        color: Qt.alpha(win.engineError !== "" ? win.danger : win.accent, 0.15)
+                        border.color: win.soft ? "transparent" : (win.engineError !== "" ? win.danger : win.accent)
+                        Text {
+                            id: statusText
+                            anchors.centerIn: parent
+                            text: win.engineError !== "" ? win.engineError : win.status
+                            color: win.engineError !== "" ? win.danger : win.accent
+                            font.pixelSize: 12
+                        }
+                    }
+                    Item { Layout.fillWidth: true }
+                    Chip {
+                        app: win
+                        text: win.micsMuted ? win.t("Mics muted") : win.t("Mute all mics")
+                        checked: win.micsMuted
+                        onColor: win.danger
+                        tip: "Mutes B1, B2 and B3 together, so nobody on a call or stream hears you"
+                        onToggled: win.muteMics(!win.micsMuted)
+                    }
+                    TextButton {
+                        app: win
+                        text: win.diamond ? "use as system output" : "Use as system output"
+                        tip: "Programs play into the Apps strip, like setting Voicemeeter as your Windows output"
+                        onClicked: win.makeDefault("vox_pro_apps", "System output is now Vox Pro Apps.")
+                    }
+                    TextButton {
+                        app: win
+                        text: win.diamond ? "use b1 as system mic" : "Use B1 as system mic"
+                        tip: "Programs that use the default microphone hear B1"
+                        onClicked: win.makeDefault("vox_pro_b1", "System microphone is now Vox Pro B1.")
+                    }
+                    Item { Layout.preferredWidth: 30; Layout.preferredHeight: 32 }   // the gear sits here
+                }
+            }
+
+            Item {
+                visible: rightSide.showingBack
+                anchors.fill: parent
+                SettingsPanel {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: Math.min(parent.width, 860)
+                    height: parent.height
+                    app: win
+                }
+            }
+
+            // Same spot on both faces, so the gear and "Done" are one click apart.
+            TextButton {
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                width: rightSide.showingBack ? implicitWidth : 30
+                app: win
+                text: rightSide.showingBack ? "Done  ⟲" : "⚙"
+                tip: rightSide.showingBack ? "Back to the mixer" : "Settings and themes"
+                onClicked: rightSide.turn = rightSide.showingBack ? 0 : 180
             }
         }
     }

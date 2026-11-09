@@ -334,13 +334,13 @@ Rectangle {
             checked: !!card.strip.a_hears_dry
             enabled: card.strip.pitch_semitones !== 0
             opacity: enabled ? 1 : 0.5
-            tip: "A1-A3 play your voice without the pitch (and its delay). B1/B2 still carry the pitched voice."
+            tip: "The A buses play your voice without the pitch (and its delay). B mics still carry the pitched voice."
             onToggled: card.set(s => s.a_hears_dry = !s.a_hears_dry)
         }
         Text {
             Layout.fillWidth: true
             visible: card.strip.pitch_semitones !== 0
-            text: card.strip.a_hears_dry ? "You hear yourself with no delay. B1/B2 get the pitched voice, about 80 ms behind." : "Pitch adds about 80 ms of delay while it is on."
+            text: card.strip.a_hears_dry ? "You hear yourself with no delay. B mics get the pitched voice, about 80 ms behind." : "Pitch adds about 80 ms of delay while it is on."
             color: card.app.warning
             font.pixelSize: 11
             wrapMode: Text.WordWrap
@@ -383,7 +383,7 @@ Rectangle {
                 app: card.app
                 text: card.app.t("On B mics")
                 checked: card.strip.duck_b !== false
-                tip: "Duck what the B1/B2 mics carry (what others hear)"
+                tip: "Duck what the B mics mics carry (what others hear)"
                 onToggled: card.set(s => s.duck_b = !(s.duck_b !== false))
             }
             Chip {

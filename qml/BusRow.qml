@@ -6,15 +6,10 @@ Rectangle {
     id: row
     required property var app
     required property int index
-    property int offset: 0
-    readonly property int busIndex: index + offset
+    readonly property int busIndex: index
     readonly property var bus: app.cfg.buses[busIndex]
     readonly property var peaks: app.meters.buses && app.meters.buses[busIndex] ? app.meters.buses[busIndex] : [0, 0]
 
-    // Virtual mics have no device to pick, so they fit on one thin line.
-    readonly property bool compact: bus.virtual_output
-
-    implicitHeight: compact ? 48 : 88
     color: app.diamond ? "transparent" : app.panelFill
     radius: app.rCard
     border.color: app.diamond ? "transparent" : app.edge
@@ -28,51 +23,18 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: row.compact ? 8 : 12
-        spacing: 10
+        anchors.margins: 14
+        spacing: 8
 
         RowLayout {
-            spacing: 10
+            spacing: 8
             Text {
-                Layout.preferredWidth: 30
+                Layout.fillWidth: true
                 text: row.bus.label
                 color: row.app.accent
                 font.family: row.app.mono
                 font.pixelSize: 15
                 font.weight: Font.Bold
-            }
-            DevicePicker {
-                visible: !row.bus.virtual_output
-                Layout.fillWidth: true
-                app: row.app
-                devices: row.app.devices.sinks
-                current: row.bus.device
-                onPicked: name => row.set(b => b.device = name)
-            }
-            LevelMeter {
-                visible: row.compact
-                Layout.fillWidth: true
-                Layout.preferredHeight: 10
-                app: row.app
-                vertical: false
-                peaks: row.peaks
-            }
-            Fader {
-                visible: row.compact
-                Layout.preferredWidth: 110
-                app: row.app
-                vertical: false
-                value: row.bus.gain_db
-                onMoved: v => row.set(b => b.gain_db = v)
-            }
-            Text {
-                visible: row.compact
-                Layout.preferredWidth: 56
-                horizontalAlignment: Text.AlignRight
-                text: row.app.db(row.bus.gain_db)
-                color: row.app.ink
-                font.family: row.app.mono
-                font.pixelSize: 12
             }
             Chip {
                 app: row.app
@@ -82,33 +44,48 @@ Rectangle {
                 onToggled: row.set(b => b.mute = !b.mute)
             }
         }
-
+        DevicePicker {
+            visible: !row.bus.virtual_output
+            Layout.fillWidth: true
+            app: row.app
+            devices: row.app.devices.sinks
+            current: row.bus.device
+            onPicked: name => row.set(b => b.device = name)
+        }
+        LevelMeter {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 10
+            app: row.app
+            vertical: false
+            peaks: row.peaks
+        }
         RowLayout {
-            visible: !row.compact
-            spacing: 12
-            Item { Layout.preferredWidth: 30 }
-            LevelMeter {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 10
-                app: row.app
-                vertical: false
-                peaks: row.peaks
-            }
+            spacing: 8
             Fader {
-                Layout.preferredWidth: 150
+                Layout.fillWidth: true
                 app: row.app
                 vertical: false
                 value: row.bus.gain_db
                 onMoved: v => row.set(b => b.gain_db = v)
             }
             Text {
-                Layout.preferredWidth: 64
+                Layout.preferredWidth: 58
                 horizontalAlignment: Text.AlignRight
                 text: row.app.db(row.bus.gain_db)
                 color: row.app.ink
                 font.family: row.app.mono
                 font.pixelSize: 12
             }
+        }
+        // A virtual mic also shows which programs are recording from it.
+        StreamList {
+            visible: row.bus.virtual_output
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            app: row.app
+            target: row.bus.label.toLowerCase()
+            mutable: false
+            emptyText: "Nobody is using this mic"
         }
     }
 }

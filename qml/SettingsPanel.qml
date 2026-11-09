@@ -325,7 +325,7 @@ ColumnLayout {
                     Text { text: "Push to talk"; color: panel.app.ink; font.pixelSize: 13; font.weight: Font.DemiBold }
                     Text {
                         Layout.fillWidth: true
-                        text: "Mic reaches B1/B2 only while held"
+                        text: "Mic reaches B mics only while held"
                         color: panel.app.dim
                         font.pixelSize: 11
                         elide: Text.ElideRight
@@ -361,7 +361,7 @@ ColumnLayout {
                     Text { text: "Mute microphones"; color: panel.app.ink; font.pixelSize: 13; font.weight: Font.DemiBold }
                     Text {
                         Layout.fillWidth: true
-                        text: "One key mutes or unmutes B1 and B2"
+                        text: "One key mutes or unmutes the B mics"
                         color: panel.app.dim
                         font.pixelSize: 11
                         elide: Text.ElideRight
