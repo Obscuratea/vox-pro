@@ -373,6 +373,59 @@ ColumnLayout {
         }
     }
 
+    // ---- Recording ----
+    Text {
+        Layout.topMargin: 10
+        text: panel.app.t("Recording")
+        color: panel.app.dim
+        font.family: panel.app.mono
+        font.pixelSize: 10
+        font.letterSpacing: 1
+    }
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 56 + 3 * 46
+        radius: panel.app.rBox
+        color: panel.app.panelFill
+        border.color: panel.app.soft ? panel.app.controlEdge : panel.app.line
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 12
+            spacing: 8
+            Text {
+                Layout.fillWidth: true
+                text: "Rec on an output saves what it carries to Music/Vox Pro. Sizes are per hour of stereo."
+                color: panel.app.dim
+                font.pixelSize: 11
+                wrapMode: Text.WordWrap
+            }
+            Repeater {
+                model: [
+                    { id: "flac", name: "FLAC", note: "24-bit, lossless · about 0.5 GB an hour" },
+                    { id: "wav", name: "WAV", note: "32-bit float, lossless, biggest · about 1.4 GB an hour" },
+                    { id: "mp3", name: "MP3", note: "192 kbps, lossy, smallest · about 85 MB an hour" }
+                ]
+                RowLayout {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    spacing: 12
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+                        Text { text: parent.parent.modelData.name; color: panel.app.ink; font.pixelSize: 13; font.weight: Font.DemiBold }
+                        Text { Layout.fillWidth: true; text: parent.parent.modelData.note; color: panel.app.dim; font.pixelSize: 11; elide: Text.ElideRight }
+                    }
+                    Chip {
+                        app: panel.app
+                        text: checked ? panel.app.t("Selected") : panel.app.t("Use")
+                        checked: (panel.app.cfg.record_format || "flac") === parent.modelData.id
+                        onToggled: panel.app.change(c => c.record_format = parent.modelData.id)
+                    }
+                }
+            }
+        }
+    }
+
     // ---- Behaviour ----
     Text {
         Layout.topMargin: 10

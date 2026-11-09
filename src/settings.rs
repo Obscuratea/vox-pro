@@ -150,9 +150,16 @@ pub struct Settings {
     /// (The key itself is kept by the desktop's shortcut service, see shortcuts.rs.)
     #[serde(default)]
     pub ptt_enabled: bool,
+    /// What recordings are saved as: "wav" (32-bit float), "flac" (24-bit lossless) or "mp3" (192 kbps).
+    #[serde(default = "default_format")]
+    pub record_format: String,
     /// Closing the window leaves Vox running in the tray.
     #[serde(default)]
     pub close_to_tray: bool,
+}
+
+fn default_format() -> String {
+    "flac".into()
 }
 
 fn default_theme() -> String {
@@ -191,6 +198,7 @@ impl Default for Settings {
             bg_image: String::new(),
             scenes: Vec::new(),
             ptt_enabled: false,
+            record_format: default_format(),
             close_to_tray: false,
         }
     }
@@ -236,6 +244,9 @@ impl Settings {
             bus.label = d.label.clone();
             bus.gain_db = bus.gain_db.clamp(-60.0, 12.0);
             bus.limiter_db = bus.limiter_db.clamp(-24.0, 0.0);
+        }
+        if !matches!(s.record_format.as_str(), "wav" | "flac" | "mp3") {
+            s.record_format = default_format();
         }
         s.scenes.truncate(MAX_SCENES);
         s

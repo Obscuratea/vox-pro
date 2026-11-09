@@ -9,7 +9,7 @@
 //! handler share the mixer without locks. Strips write processed audio into ring buffers
 //! and each bus reads from them, which costs at most one graph cycle of delay.
 
-use crate::recorder::Recorder;
+use crate::recorder::{Format, Recorder};
 use crate::dsp::{CompParams, SAMPLE_RATE, Voice, db_to_lin};
 use crate::settings::{A_BUSES, BUSES, STRIPS, Settings};
 use pipewire as pw;
@@ -205,7 +205,7 @@ impl Mixer {
             return;
         }
         let status = if on && self.recorders[bus].is_none() {
-            match Recorder::start(&self.settings.buses[bus].label, SAMPLE_RATE as u32) {
+            match Recorder::start(&self.settings.buses[bus].label, SAMPLE_RATE as u32, Format::parse(&self.settings.record_format)) {
                 Ok(rec) => {
                     let path = rec.path.display().to_string();
                     self.recorders[bus] = Some(rec);

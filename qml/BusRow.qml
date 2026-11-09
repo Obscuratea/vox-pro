@@ -43,7 +43,7 @@ Rectangle {
                 text: row.app.isRecording(row.busIndex) ? "● Rec" : "Rec"
                 checked: row.app.isRecording(row.busIndex)
                 onColor: row.app.danger
-                tip: checked ? "Stop and save the recording (Music/Vox Pro)" : "Record what this output carries to a WAV file in Music/Vox Pro"
+                tip: checked ? "Stop and save the recording (Music/Vox Pro)" : "Record what this output carries to a file in Music/Vox Pro (format in Settings)"
                 onToggled: row.app.recordBus(row.busIndex, !checked)
             }
             Chip {
