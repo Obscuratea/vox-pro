@@ -1,27 +1,18 @@
 import QtQuick
 
-// A flat, matt gold metal knob for the Pro theme: an almost solid brushed-gold disc, a thin darker rim and a
-// fine machined ring inside it. No gloss.
+// A flat, matt knob for the Pro theme: a plain disc filled with the same accent gradient as the buttons
+// (gold, or the wallpaper's colours when a picture is behind the mixer) and a thin darker rim.
 Rectangle {
     id: knob
+    required property var app
     property bool lit: false
     width: 22
     height: 22
     radius: width / 2
     border.width: 1
-    border.color: "#7d5f1c"
+    border.color: Qt.darker(app.accentEnd, 1.9)
     gradient: Gradient {
-        GradientStop { position: 0.0; color: knob.lit ? "#dcb862" : "#cfab55" }
-        GradientStop { position: 1.0; color: knob.lit ? "#c29a40" : "#b78f3a" }
-    }
-    Rectangle {
-        anchors.centerIn: parent
-        width: parent.width * 0.58
-        height: width
-        radius: width / 2
-        color: "transparent"
-        border.width: 1
-        border.color: "#8a6a24"
-        opacity: 0.7
+        GradientStop { position: 0.0; color: knob.lit ? Qt.lighter(knob.app.accent, 1.15) : knob.app.accent }
+        GradientStop { position: 1.0; color: knob.lit ? Qt.lighter(knob.app.accentEnd, 1.15) : knob.app.accentEnd }
     }
 }

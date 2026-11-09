@@ -78,6 +78,7 @@ Item {
             color: area.pressed || area.containsMouse ? tone.app.accent : tone.app.ink
         }
         Knob {
+            app: tone.app
             visible: tone.app.gold
             x: tone.posOf(tone.value) * rail.width - width / 2
             anchors.verticalCenter: parent.verticalCenter

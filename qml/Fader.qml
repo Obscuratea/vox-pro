@@ -78,6 +78,7 @@ Item {
 
     // Pro theme: a round gold metal knob on the same spot.
     Knob {
+        app: fader.app
         visible: fader.app.gold
         readonly property real along: fader.posOf(fader.value) * fader.span + fader.handleLength / 2
         width: fader.vertical ? 26 : Math.min(22, fader.height - 2)
