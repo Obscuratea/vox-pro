@@ -1,0 +1,26 @@
+# Maintainer: obscura
+# Lives in packaging/ so makepkg's src/ and pkg/ scratch folders never touch the Rust src/.
+pkgname=vox-pro
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Voice and audio mixer for PipeWire, in the spirit of Voicemeeter Banana'
+arch=('x86_64')
+license=('custom')
+depends=('pipewire' 'wireplumber' 'qt6-base' 'qt6-declarative' 'libnotify' 'soundtouch')
+makedepends=('cargo' 'clang')
+# makepkg's LTO flags don't mix well with the Rust + C++ (cxx-qt) build.
+options=('!lto' '!debug')
+source=()
+
+build() {
+  cd "$startdir/.."
+  cargo build --release --locked
+}
+
+package() {
+  cd "$startdir/.."
+  install -Dm755 target/release/vox-pro "$pkgdir/usr/bin/vox-pro"
+  install -Dm644 packaging/vox-pro.desktop "$pkgdir/usr/share/applications/vox-pro.desktop"
+  install -Dm644 packaging/vox-pro.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/vox-pro.svg"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Vox Pro
+GenericName=Audio Mixer
+Comment=Route your mic and apps to your headphones and into a virtual mic
+Exec=vox-pro
+Icon=vox-pro
+Categories=AudioVideo;Audio;Mixer;
+Keywords=mixer;voicemeeter;pipewire;microphone;routing;
+StartupWMClass=vox-pro
+Terminal=false
