@@ -74,6 +74,12 @@ pub mod qobject {
         #[cxx_name = "setShortcutKey"]
         fn set_shortcut_key(self: &Mixer, action: &QString, key: i32) -> i32;
 
+        // Recording: one entry per output, the file being written, "!reason" if it failed, "" when idle.
+        #[qinvokable]
+        fn recording(self: &Mixer) -> QString;
+        #[qinvokable]
+        fn record(self: &Mixer, bus: i32, on: bool);
+
         // Send one program's playback to a strip: target is "apps" or "media".
         #[qinvokable]
         #[cxx_name = "moveStream"]
@@ -142,6 +148,16 @@ impl qobject::Mixer {
 
     fn mute_stream(&self, id: i32, muted: bool) {
         let _ = state().engine.sender.lock().unwrap().send(Command::MuteStream(id as u32, muted));
+    }
+
+    fn recording(&self) -> qobject::QString {
+        qobject::QString::from(&serde_json::to_string(&*state().engine.shared.recording.lock().unwrap()).unwrap_or_default())
+    }
+
+    fn record(&self, bus: i32, on: bool) {
+        if bus >= 0 {
+            let _ = state().engine.sender.lock().unwrap().send(Command::Record(bus as usize, on));
+        }
     }
 
     fn move_stream(&self, id: i32, target: &qobject::QString) {

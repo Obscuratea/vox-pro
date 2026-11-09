@@ -9,6 +9,7 @@
 //! handler share the mixer without locks. Strips write processed audio into ring buffers
 //! and each bus reads from them, which costs at most one graph cycle of delay.
 
+use crate::recorder::Recorder;
 use crate::dsp::{CompParams, SAMPLE_RATE, Voice, db_to_lin};
 use crate::settings::{A_BUSES, BUSES, STRIPS, Settings};
 use pipewire as pw;
@@ -79,6 +80,8 @@ pub struct Shared {
     pub ptt_held: AtomicBool,
     /// Things the desktop asked for that the UI has to carry out (e.g. "mute-mics"), oldest first.
     pub events: Mutex<Vec<String>>,
+    /// Per output: the file being recorded to, "!reason" if it couldn't start, "" when not recording.
+    pub recording: Mutex<Vec<String>>,
 }
 
 impl Shared {
@@ -94,6 +97,7 @@ impl Shared {
             status: Mutex::default(),
             ptt_held: AtomicBool::new(false),
             events: Mutex::default(),
+            recording: Mutex::new(vec![String::new(); BUSES]),
         }
     }
 }
@@ -114,6 +118,8 @@ pub enum Command {
     MuteStream(u32, bool),
     /// Send one program's playback to "apps" or "media" (by PipeWire node id).
     MoveStream(u32, String),
+    /// Start or stop recording one output (by bus index) to a file.
+    Record(usize, bool),
 }
 
 pub struct Handle {
@@ -188,10 +194,34 @@ struct Mixer {
     block: Vec<[f32; 2]>,
     /// The same cycle before pitch shifting.
     dry: Vec<[f32; 2]>,
+    recorders: Vec<Option<Recorder>>,
     shared: Arc<Shared>,
 }
 
 impl Mixer {
+    /// Start or stop writing one output to a file, and tell the UI where it went.
+    fn set_recording(&mut self, bus: usize, on: bool) {
+        if bus >= BUSES {
+            return;
+        }
+        let status = if on && self.recorders[bus].is_none() {
+            match Recorder::start(&self.settings.buses[bus].label, SAMPLE_RATE as u32) {
+                Ok(rec) => {
+                    let path = rec.path.display().to_string();
+                    self.recorders[bus] = Some(rec);
+                    path
+                }
+                Err(e) => format!("!{e}"),
+            }
+        } else if !on {
+            self.recorders[bus].take().map(|r| r.finish());
+            String::new()
+        } else {
+            return;
+        };
+        self.shared.recording.lock().unwrap()[bus] = status;
+    }
+
     fn new(shared: Arc<Shared>) -> Self {
         Self {
             settings: Settings::default(),
@@ -208,6 +238,7 @@ impl Mixer {
             scratch: Vec::new(),
             block: Vec::new(),
             dry: Vec::new(),
+            recorders: (0..BUSES).map(|_| None).collect(),
             shared,
         }
     }
@@ -339,6 +370,11 @@ impl Mixer {
             peak[1] = peak[1].max(r.abs());
             bytes[0..4].copy_from_slice(&l.to_le_bytes());
             bytes[4..8].copy_from_slice(&r.to_le_bytes());
+        }
+        if let Some(rec) = &self.recorders[index] {
+            self.scratch.clear();
+            self.scratch.extend(out.chunks_exact(STRIDE).map(|b| [read_f32(&b[0..4]), read_f32(&b[4..8])]));
+            rec.push(&self.scratch);
         }
         for ch in 0..2 {
             record_peak(&self.shared.bus_peaks[index][ch], peak[ch]);
@@ -1017,6 +1053,7 @@ fn run(settings: Settings, shared: Arc<Shared>, receiver: pw::channel::Receiver<
                     *first.borrow_mut() = Some(settings);
                 }
             }
+            Command::Record(bus, on) => mixer.borrow_mut().set_recording(bus, on),
             Command::MuteStream(id, muted) => {
                 if let Some(stream) = apps.borrow().get(&id) {
                     set_mute(stream, muted);

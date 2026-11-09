@@ -129,6 +129,11 @@ ApplicationWindow {
     property string devicesJson: ""
     property var streams: []
     property string streamsJson: "[]"
+    property var recording: []
+    property string recordingJson: "[]"
+    property bool matrixOpen: Qt.application.arguments.indexOf("--matrix") >= 0   // --matrix is a dev aid for screenshots
+    function isRecording(bus) { return !!recording[bus] && recording[bus][0] !== "!"; }
+    function recordBus(bus, on) { mixer.record(bus, on); }
     property string status: Qt.application.arguments.indexOf("--status") >= 0 ? "System output is now Vox Pro Apps." : ""
 
     // Every edit goes through here. It edits a copy and swaps it in: a binding that gets back the
@@ -319,12 +324,33 @@ ApplicationWindow {
                 win.streamsJson = json;
                 win.streams = JSON.parse(json);
             }
+            const rec = mixer.recording();
+            if (rec !== win.recordingJson) {
+                const before = win.recording;
+                win.recordingJson = rec;
+                win.recording = JSON.parse(rec);
+                for (let i = 0; i < win.recording.length; i++) {
+                    const now = win.recording[i] || "", was = before[i] || "";
+                    if (now === was) continue;
+                    if (now[0] === "!") flash("Can't record " + cfg.buses[i].label + ": " + now.slice(1));
+                    else if (now !== "") flash("Recording " + cfg.buses[i].label + " to " + now);
+                    else flash("Saved the " + cfg.buses[i].label + " recording in Music/Vox Pro");
+                }
+            }
         }
     }
     onClosing: close => {
         mixer.persist();
         if (cfg.close_to_tray && trayOn) { close.accepted = false; hide(); }
         else Qt.quit();
+    }
+
+    // Developer aid: `vox-pro --rec 5` starts recording output 5 (B1) after a moment, for engine tests.
+    Timer {
+        readonly property int flag: Qt.application.arguments.indexOf("--rec")
+        interval: 3000
+        running: flag >= 0
+        onTriggered: win.recordBus(parseInt(Qt.application.arguments[flag + 1]), true)
     }
 
     // Developer aid: `vox-pro --screenshot out.png` saves the window and quits.
@@ -508,6 +534,12 @@ ApplicationWindow {
                         }
                     }
                     Item { Layout.fillWidth: true }
+                    TextButton {
+                        app: win
+                        text: win.diamond ? "routing matrix" : "Routing matrix"
+                        tip: "Every strip and every output on one grid"
+                        onClicked: win.matrixOpen = true
+                    }
                     Chip {
                         app: win
                         text: win.micsMuted ? win.t("Mics muted") : win.t("Mute all mics")
@@ -552,6 +584,100 @@ ApplicationWindow {
                 text: rightSide.showingBack ? "Done  ⟲" : "⚙"
                 tip: rightSide.showingBack ? "Back to the mixer" : "Settings and themes"
                 onClicked: rightSide.turn = rightSide.showingBack ? 0 : 180
+            }
+        }
+
+        // The routing matrix: which strip feeds which output, all on one grid.
+        Rectangle {
+            id: matrix
+            visible: win.matrixOpen
+            anchors.fill: parent
+            color: win.bg
+
+            MouseArea { anchors.fill: parent }   // keeps clicks from reaching the mixer underneath
+
+            ColumnLayout {
+                anchors.centerIn: parent
+                spacing: 14
+
+                Text {
+                    text: win.sectionLabel("", "Routing matrix")
+                    color: win.dim
+                    textFormat: Text.StyledText
+                    font.family: win.mono
+                    font.pixelSize: win.soft ? 12 : 11
+                    font.weight: win.soft ? Font.Medium : Font.Normal
+                    font.letterSpacing: win.soft || win.diamond ? 0.3 : 2
+                }
+
+                GridLayout {
+                    columns: 9
+                    columnSpacing: 8
+                    rowSpacing: 8
+
+                    Item { Layout.preferredWidth: 150; Layout.preferredHeight: 1 }
+                    Repeater {
+                        model: 8
+                        ColumnLayout {
+                            required property int index
+                            Layout.preferredWidth: 96
+                            spacing: 2
+                            Text {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: win.cfg.buses[index].label
+                                color: win.accent
+                                font.family: win.mono
+                                font.pixelSize: 15
+                                font.weight: Font.Bold
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignHCenter
+                                elide: Text.ElideRight
+                                text: win.cfg.buses[index].virtual_output ? win.t("virtual mic") : (win.cfg.buses[index].device !== "" ? win.describe(win.devices.sinks, win.cfg.buses[index].device) : win.t("no device"))
+                                color: win.dim
+                                font.pixelSize: 10
+                            }
+                        }
+                    }
+
+                    Repeater {
+                        model: 8 * 9
+                        Item {
+                            required property int index
+                            readonly property int strip: Math.floor(index / 9)
+                            readonly property int bus: index % 9 - 1
+                            Layout.preferredWidth: bus < 0 ? 150 : 96
+                            Layout.preferredHeight: 38
+                            Text {
+                                visible: parent.bus < 0
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: win.cfg.strips[parent.strip].label
+                                color: win.ink
+                                font.pixelSize: 14
+                                font.weight: Font.DemiBold
+                            }
+                            Chip {
+                                visible: parent.bus >= 0
+                                anchors.centerIn: parent
+                                width: 80
+                                height: 34
+                                app: win
+                                text: checked ? "●" : ""
+                                checked: parent.bus >= 0 && win.cfg.strips[parent.strip].routes[parent.bus]
+                                tip: win.cfg.strips[parent.strip].label + " → " + win.cfg.buses[Math.max(0, parent.bus)].label
+                                onToggled: win.change(c => c.strips[parent.strip].routes[parent.bus] = !c.strips[parent.strip].routes[parent.bus])
+                            }
+                        }
+                    }
+                }
+
+                TextButton {
+                    Layout.alignment: Qt.AlignRight
+                    app: win
+                    text: "Done  ⟲"
+                    onClicked: win.matrixOpen = false
+                }
             }
         }
     }
