@@ -308,6 +308,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "clap-sys"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a76abbdb2907f6fd97fb6bc0b7be96b77d328f2dd9669d1075cc03369ed22154"
+
+[[package]]
 name = "clap_builder"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -353,6 +359,12 @@ dependencies = [
  "termcolor",
  "unicode-width 0.2.2",
 ]
+
+[[package]]
+name = "com-scrape-types"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ce183b975b8fc736a20919c4002717255fbd867df575c792aeefa9a56a73ad0"
 
 [[package]]
 name = "concurrent-queue"
@@ -1671,11 +1683,13 @@ name = "vox-pro"
 version = "0.2.0"
 dependencies = [
  "cc",
+ "clap-sys",
  "cxx",
  "cxx-qt",
  "cxx-qt-build",
  "cxx-qt-lib",
  "flacenc",
+ "libloading",
  "lilv",
  "livi",
  "ogg",
@@ -1683,7 +1697,17 @@ dependencies = [
  "pipewire",
  "serde",
  "serde_json",
+ "vst3",
  "zbus",
+]
+
+[[package]]
+name = "vst3"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e31e3fe7a6f028ded8c5a9984cf283319e6dc63572c9b71da1d4ee9d71d3b6bf"
+dependencies = [
+ "com-scrape-types",
 ]
 
 [[package]]

@@ -20,6 +20,8 @@ Rectangle {
     readonly property var slot: !browsing && selected < slots.length ? slots[selected] : null
     readonly property var info: slot && app.pluginsScanned ? app.pluginInfo(slot.uri) : null
 
+    property string addMessage: ""
+    property bool addFailed: false
     property string search: ""
     property string category: ""
     readonly property var categories: {
@@ -81,6 +83,30 @@ Rectangle {
 
     color: app.bg
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }   // nothing reaches the mixer underneath
+    // Drop a .clap, .vst3 or .lv2 on the window to add it.
+    DropArea {
+        anchors.fill: parent
+        keys: ["text/uri-list"]
+        onDropped: drop => {
+            let failed = "", added = 0;
+            for (const url of drop.urls) {
+                const err = rack.app.installPlugin(url);
+                if (err === "") added++; else failed = err;
+            }
+            rack.addFailed = failed !== "";
+            rack.addMessage = failed !== "" ? failed : added === 1 ? "Plugin added." : added + " plugins added.";
+            if (added > 0) { rack.browsing = true; rack.app.rescanPlugins(); }
+        }
+        Rectangle {
+            anchors.fill: parent
+            visible: parent.containsDrag
+            color: Qt.alpha(rack.app.accent, 0.12)
+            border.color: rack.app.accent
+            border.width: 2
+            radius: rack.app.rCard
+            Text { anchors.centerIn: parent; text: "Drop to add the plugin"; color: rack.app.ink; font.pixelSize: 16; font.bold: true }
+        }
+    }
 
     Component.onCompleted: app.loadPlugins()
     Timer { interval: 250; repeat: true; running: !rack.app.pluginsScanned; onTriggered: rack.app.loadPlugins() }
@@ -270,6 +296,12 @@ Rectangle {
                             }
                         }
                         TextButton {
+                            app: rack.app
+                            text: "Rescan"
+                            tip: "Look for plugins again. To add one, drop a .clap, .vst3 or .lv2 anywhere on this window, or install it from your package manager."
+                            onClicked: { rack.addMessage = ""; rack.app.rescanPlugins(); }
+                        }
+                        TextButton {
                             visible: rack.slots.length > 0
                             app: rack.app
                             text: "Cancel"
@@ -304,10 +336,19 @@ Rectangle {
                         Layout.topMargin: 20
                         horizontalAlignment: Text.AlignHCenter
                         text: !rack.app.pluginsScanned ? "Looking for plugins…"
-                            : rack.app.pluginList.length === 0 ? "No LV2 plugins found. Install some (the lsp-plugins-lv2, calf or x42-plugins packages) and open this again."
+                            : rack.app.pluginList.length === 0 ? "No plugins found. Install some (lsp-plugins, calf or x42-plugins from your package manager) or drop a .clap, .vst3 or .lv2 here."
                             : "Nothing matches."
                         color: rack.app.dim
                         font.pixelSize: 12
+                        wrapMode: Text.WordWrap
+                    }
+                    // Adding plugins: drop one on the window, or install it any way you like and press Rescan.
+                    Text {
+                        visible: rack.addMessage !== ""
+                        Layout.fillWidth: true
+                        text: rack.addMessage
+                        color: rack.addFailed ? rack.app.danger : rack.app.dim
+                        font.pixelSize: 11
                         wrapMode: Text.WordWrap
                     }
                     ListView {
@@ -347,7 +388,14 @@ Rectangle {
                                     Layout.maximumWidth: 260
                                 }
                                 Text {
-                                    Layout.preferredWidth: 120
+                                    Layout.preferredWidth: 40
+                                    text: entry.modelData.format
+                                    color: rack.app.accent
+                                    font.pixelSize: 10
+                                    font.bold: true
+                                }
+                                Text {
+                                    Layout.preferredWidth: 150
                                     horizontalAlignment: Text.AlignRight
                                     text: entry.modelData.category + (entry.modelData.stereo ? "" : "  ·  mono")
                                     color: rack.app.dim

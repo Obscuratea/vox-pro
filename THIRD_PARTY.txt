@@ -37,7 +37,7 @@ read their full texts on https://crates.io/crates/NAME).
 
 
 MIT OR Apache-2.0
-  async-broadcast v0.7.2, async-recursion v1.2.0, async-trait v0.1.92, bitflags v2.13.2, block-buffer v0.10.4, cfg-if v1.0.5, clang-format v0.3.0, crc v3.4.0, crc-catalog v2.5.0, crossbeam-channel v0.5.17, crossbeam-utils v0.8.23, crypto-common v0.1.7, cxx v1.0.205, cxx-gen v0.7.205, cxx-qt v0.10.0, cxx-qt-gen v0.10.0, cxx-qt-lib v0.10.0, cxx-qt-macro v0.10.0, cxxbridge-macro v1.0.205, digest v0.10.7, enumflags2 v0.7.12, enumflags2_derive v0.7.12, errno v0.3.14, futures-core v0.3.34, futures-io v0.3.34, hash32 v0.3.1, hashbrown v0.17.1, heapless v0.8.0, hex v0.4.3, indoc v2.0.8, itoa v1.0.18, libc v0.2.191, link-cplusplus v1.0.12, lock_api v0.5.0, log v0.4.35, lv2-sys v2.0.0, md-5 v0.10.6, num-traits v0.2.19, once_cell v1.21.4, ordered-stream v0.2.0, parking_lot v0.13.0, parking_lot_core v0.10.0, piper v0.2.5, proc-macro-crate v3.5.0, proc-macro2 v1.0.107, quote v1.0.47, ringbuf v0.5.3, rustversion v1.0.23, scopeguard v1.2.0, seq-macro v0.3.6, serde v1.0.229, serde_core v1.0.229, serde_derive v1.0.229, serde_json v1.0.154, serde_repr v0.1.21, signal-hook-registry v1.4.8, smallvec v1.16.3, stable_deref_trait v1.2.1, static_assertions v1.1.0, syn v2.0.119, syn v3.0.9, thiserror v1.0.69, thiserror-impl v1.0.69, toml_datetime v1.1.2+spec-1.1.0, toml_edit v0.25.18+spec-1.1.0, toml_parser v1.1.5+spec-1.1.0, typenum v1.20.1, unicode-segmentation v1.13.3, unicode-width v0.2.2
+  async-broadcast v0.7.2, async-recursion v1.2.0, async-trait v0.1.92, bitflags v2.13.2, block-buffer v0.10.4, cfg-if v1.0.5, clang-format v0.3.0, com-scrape-types v0.1.1, crc v3.4.0, crc-catalog v2.5.0, crossbeam-channel v0.5.17, crossbeam-utils v0.8.23, crypto-common v0.1.7, cxx v1.0.205, cxx-gen v0.7.205, cxx-qt v0.10.0, cxx-qt-gen v0.10.0, cxx-qt-lib v0.10.0, cxx-qt-macro v0.10.0, cxxbridge-macro v1.0.205, digest v0.10.7, enumflags2 v0.7.12, enumflags2_derive v0.7.12, errno v0.3.14, futures-core v0.3.34, futures-io v0.3.34, hash32 v0.3.1, hashbrown v0.17.1, heapless v0.8.0, hex v0.4.3, indoc v2.0.8, itoa v1.0.18, libc v0.2.191, link-cplusplus v1.0.12, lock_api v0.5.0, log v0.4.35, lv2-sys v2.0.0, md-5 v0.10.6, num-traits v0.2.19, once_cell v1.21.4, ordered-stream v0.2.0, parking_lot v0.13.0, parking_lot_core v0.10.0, piper v0.2.5, proc-macro-crate v3.5.0, proc-macro2 v1.0.107, quote v1.0.47, ringbuf v0.5.3, rustversion v1.0.23, scopeguard v1.2.0, seq-macro v0.3.6, serde v1.0.229, serde_core v1.0.229, serde_derive v1.0.229, serde_json v1.0.154, serde_repr v0.1.21, signal-hook-registry v1.4.8, smallvec v1.16.3, stable_deref_trait v1.2.1, static_assertions v1.1.0, syn v2.0.119, syn v3.0.9, thiserror v1.0.69, thiserror-impl v1.0.69, toml_datetime v1.1.2+spec-1.1.0, toml_edit v0.25.18+spec-1.1.0, toml_parser v1.1.5+spec-1.1.0, typenum v1.20.1, unicode-segmentation v1.13.3, unicode-width v0.2.2, vst3 v0.3.0
 
 
 MIT
@@ -50,6 +50,10 @@ Apache-2.0 OR MIT
 
 Unlicense OR MIT
   byteorder v1.5.0, memchr v2.8.3, termcolor v1.4.1
+
+
+MIT/Apache-2.0
+  clap-sys v0.5.0, opus v0.4.0
 
 
 Apache-2.0
@@ -68,12 +72,12 @@ Zlib
   foldhash v0.2.0
 
 
+ISC
+  libloading v0.8.9
+
+
 ISC OR MIT OR Apache-2.0
   lv2_raw v0.3.2
-
-
-MIT/Apache-2.0
-  opus v0.4.0
 
 
 (MIT OR Apache-2.0) AND Unicode-3.0

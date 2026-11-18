@@ -164,7 +164,7 @@ ApplicationWindow {
     readonly property int rackArg: Qt.application.arguments.indexOf("--rack")
     property var rackTarget: rackArg >= 0 ? { kind: Qt.application.arguments[rackArg + 1].split(":")[0], index: parseInt(Qt.application.arguments[rackArg + 1].split(":")[1]) } : null
     function openRack(kind, index) { rackTarget = { kind: kind, index: index }; }
-    // Installed LV2 plugins (see plugins.rs). The list is read once the first scan is done; controls are read per plugin and kept.
+    // Installed LV2, CLAP and VST3 plugins (see plugins.rs). The list is read once the first scan is done; controls are read per plugin and kept.
     property var pluginList: []
     property bool pluginsScanned: false
     function loadPlugins() {
@@ -172,6 +172,10 @@ ApplicationWindow {
         const json = mixer.pluginCatalog();
         if (json !== "") { pluginList = JSON.parse(json); pluginsScanned = true; }
     }
+    // After something was installed: forget what was found and look again.
+    function rescanPlugins() { pluginsScanned = false; pluginInfos = ({}); pluginList = []; mixer.pluginsRescan(); }
+    // A plugin dropped on the rack: returns "" or what went wrong.
+    function installPlugin(url) { return mixer.pluginsInstall(decodeURIComponent(url.toString().replace("file://", ""))); }
     property var pluginInfos: ({})
     function pluginInfo(uri) {
         if (!(uri in pluginInfos)) {

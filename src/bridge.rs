@@ -67,6 +67,13 @@ pub mod qobject {
         #[cxx_name = "pluginInfo"]
         fn plugin_info(self: &Mixer, uri: &QString) -> QString;
         #[qinvokable]
+        #[cxx_name = "pluginsRescan"]
+        fn plugins_rescan(self: &Mixer);
+        // Copy a dropped plugin (.clap file, .vst3 or .lv2 folder) into the user's plugin folder and rescan. Returns "" or what went wrong.
+        #[qinvokable]
+        #[cxx_name = "pluginsInstall"]
+        fn plugins_install(self: &Mixer, path: &QString) -> QString;
+        #[qinvokable]
         #[cxx_name = "pluginsSafeMode"]
         fn plugins_safe_mode(self: &Mixer) -> bool;
         #[qinvokable]
@@ -187,6 +194,18 @@ impl qobject::Mixer {
 
     fn plugin_info(&self, uri: &qobject::QString) -> qobject::QString {
         qobject::QString::from(&crate::plugins::host().info(&uri.to_string()))
+    }
+
+    fn plugins_rescan(&self) {
+        crate::plugins::host().rescan();
+    }
+
+    fn plugins_install(&self, path: &qobject::QString) -> qobject::QString {
+        let result = crate::plugins::install(std::path::Path::new(&path.to_string()));
+        if result.is_ok() {
+            crate::plugins::host().rescan();
+        }
+        qobject::QString::from(&result.err().unwrap_or_default())
     }
 
     fn plugins_safe_mode(&self) -> bool {

@@ -3,6 +3,8 @@ mod dsp;
 mod engine;
 mod icons;
 mod peq;
+mod plug_clap;
+mod plug_vst3;
 mod plugins;
 mod recorder;
 mod settings;

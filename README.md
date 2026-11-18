@@ -18,7 +18,7 @@ reaches for. Rust + PipeWire for the audio, Qt Quick for the interface. Not affi
   high pass, notch) with frequency, gain and width. Drag the dots on the curve or set exact values.
 - **Compressor on every strip**, mics and programs alike: soft knee, with threshold, ratio, attack,
   release and make-up gain.
-- **Plugin rack:** load LV2 plugins (LSP, Calf, x42 and anything else you have installed) on any strip
+- **Plugin rack:** load LV2, CLAP and VST3 plugins (LSP, Calf, x42, Dragonfly and anything else you have installed) on any strip
   or output, up to six in a chain, with a control for every plugin parameter.
 - **Voice tools on the mic strips:** noise gate, bass, brightness and pitch, plus auto-duck that
   dips Apps and Media while you talk.
@@ -55,11 +55,19 @@ The plugin rack, with a plugin's controls and the list of installed plugins:
 
 ### Plugins
 
-Vox Pro hosts **LV2** plugins that take mono or stereo audio in and out. It finds the ones installed on
-your system (`/usr/lib/lv2`, `~/.lv2`); it doesn't ship any. On Arch, `lsp-plugins-lv2`, `calf` and
-`x42-plugins` are a good start. Plugins get a generic control panel drawn by Vox, not their own windows.
-A plugin runs inside Vox, so a faulty one can take Vox down: if that happens while a plugin is loading,
-the next start comes up with plugins switched off and tells you. VST3 and CLAP aren't supported yet.
+Vox Pro hosts **LV2**, **CLAP** and **VST3** plugins that take mono or stereo audio in and out. It finds
+the ones installed on your system (`/usr/lib/lv2`, `/usr/lib/clap`, `/usr/lib/vst3` and the same under
+`~/.lv2`, `~/.clap`, `~/.vst3`); it doesn't ship any. On Arch, `lsp-plugins` (LV2, CLAP and VST3 builds),
+`calf`, `x42-plugins` and `dragonfly-reverb` are a good start.
+
+**Adding a plugin:** install it from your package manager and press **Rescan** in the plugin browser,
+or just drop a `.clap`, a `.vst3` folder or a `.lv2` folder onto the rack window and Vox copies it into
+your own plugin folder. It has to be a Linux build: Windows `.dll` plugins don't work.
+
+Plugins get a generic control panel drawn by Vox, not their own windows. Instruments and plugins that
+need MIDI, or more than two channels, aren't listed. A plugin runs inside Vox, so a faulty one can take
+Vox down: if that happens while a plugin is loading or being scanned, the next start leaves it out
+(or comes up with plugins switched off) and tells you.
 
 ## Install
 
@@ -106,7 +114,7 @@ SoundTouch are LGPL, used as system libraries) are in Settings → About and in
 - `src/engine.rs`: PipeWire streams, virtual devices, mixing, routing and limiters
 - `src/dsp.rs`: gate, shelves, compressor and the pitch stage
 - `src/peq.rs`: the parametric EQ
-- `src/plugins.rs`: the LV2 plugin host
+- `src/plugins.rs`: the plugin host (LV2), `src/plug_clap.rs` and `src/plug_vst3.rs`: the CLAP and VST3 sides
 - `src/recorder.rs`: WAV, FLAC and Opus writers
 - `src/updater.rs`: the in-app updater
 - `src/settings.rs`: the saved layout and scenes
