@@ -156,6 +156,10 @@ ApplicationWindow {
     property var recording: []
     property string recordingJson: "[]"
     property bool matrixOpen: Qt.application.arguments.indexOf("--matrix") >= 0   // --matrix is a dev aid for screenshots
+    // The parametric EQ editor: which output or strip it is open on (null = closed). `--eq bus:0` is a dev aid for screenshots.
+    readonly property int eqArg: Qt.application.arguments.indexOf("--eq")
+    property var eqTarget: eqArg >= 0 ? { kind: Qt.application.arguments[eqArg + 1].split(":")[0], index: parseInt(Qt.application.arguments[eqArg + 1].split(":")[1]) } : null
+    function openEq(kind, index) { eqTarget = { kind: kind, index: index }; }
     function isRecording(bus) { return !!recording[bus] && recording[bus][0] !== "!"; }
     function recordBus(bus, on) { mixer.record(bus, on); }
     property string status: Qt.application.arguments.indexOf("--status") >= 0 ? "System output is now Vox Pro Apps." : ""
@@ -534,7 +538,7 @@ ApplicationWindow {
                             app: win
                             Layout.fillWidth: true
                             Layout.preferredWidth: 212
-                            Layout.preferredHeight: 232
+                            Layout.preferredHeight: 268
                         }
                     }
                 }
@@ -711,6 +715,17 @@ ApplicationWindow {
                     text: "Done  ⟲"
                     onClicked: win.matrixOpen = false
                 }
+            }
+        }
+
+        Loader {
+            anchors.fill: parent
+            active: win.eqTarget !== null
+            sourceComponent: PeqEditor {
+                app: win
+                kind: win.eqTarget.kind
+                index: win.eqTarget.index
+                onDone: win.eqTarget = null
             }
         }
     }

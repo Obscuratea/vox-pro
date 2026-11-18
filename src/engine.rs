@@ -178,6 +178,8 @@ struct BusState {
     cursors: [u64; STRIPS],
     /// Push-to-talk gate per strip (1 open, 0 shut), eased over each cycle so the key doesn't click.
     ptt_gate: [f32; STRIPS],
+    /// The output's parametric EQ, after the mix and before the fader and limiter.
+    eq: crate::peq::Peq,
     /// The limiter's current gain (1 = not limiting).
     limit: f32,
     /// Ducking gain per strip (1 = not ducked), eased per sample: down fast, back up slowly.
@@ -234,7 +236,7 @@ impl Mixer {
                     gain: 0.0,
                 })
                 .collect(),
-            buses: (0..BUSES).map(|_| BusState { cursors: [0; STRIPS], ptt_gate: [1.0; STRIPS], duck_gain: [1.0; STRIPS], limit: 1.0, gain: 0.0 }).collect(),
+            buses: (0..BUSES).map(|_| BusState { cursors: [0; STRIPS], ptt_gate: [1.0; STRIPS], duck_gain: [1.0; STRIPS], eq: Default::default(), limit: 1.0, gain: 0.0 }).collect(),
             scratch: Vec::new(),
             block: Vec::new(),
             dry: Vec::new(),
@@ -354,6 +356,11 @@ impl Mixer {
             state.limit = 1.0;
         }
         let mut deepest = 1.0f32;
+        if state.eq.is_on() {
+            for frame in self.scratch.iter_mut() {
+                *frame = state.eq.process(*frame);
+            }
+        }
         for (frame, bytes) in self.scratch.iter().zip(out.chunks_exact_mut(STRIDE)) {
             state.gain += (target - state.gain) * step;
             let mut l = frame[0] * state.gain;
@@ -611,9 +618,7 @@ fn apply(
         let mut m = mixer.borrow_mut();
         for (state, strip) in m.strips.iter_mut().zip(&new.strips) {
             state.voice.configure(strip.bass_db, strip.brightness_db, strip.pitch_semitones);
-            state.voice.set_eq(strip.eq_on.then(|| {
-                [0, 1, 2].map(|i| (strip.eq_hz[i], strip.eq_db[i]))
-            }));
+            state.voice.set_eq(strip.eq_on, &strip.eq);
             state.voice.set_comp(strip.comp_on.then(|| CompParams {
                 threshold_db: strip.comp_threshold_db,
                 ratio: strip.comp_ratio,
@@ -621,6 +626,9 @@ fn apply(
                 release_ms: strip.comp_release_ms,
                 makeup_db: strip.comp_makeup_db,
             }));
+        }
+        for (state, bus) in m.buses.iter_mut().zip(&new.buses) {
+            state.eq.set(bus.eq_on, &bus.eq);
         }
         std::mem::replace(&mut m.settings, new.clone())
     };

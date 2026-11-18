@@ -87,6 +87,39 @@ Rectangle {
                 font.pixelSize: 12
             }
         }
+        // The parametric EQ: the chip switches it, the curve opens the editor.
+        RowLayout {
+            spacing: 8
+            Chip {
+                app: row.app
+                text: row.app.t("EQ")
+                checked: !!row.bus.eq_on
+                tip: "Parametric EQ on this output"
+                onToggled: row.set(b => b.eq_on = !b.eq_on)
+            }
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 28
+                radius: row.app.rChip
+                color: row.app.diamond ? "transparent" : eqMouse.containsMouse ? row.app.hover : row.app.soft ? row.app.tonal : "transparent"
+                border.color: eqMouse.containsMouse ? row.app.accent : row.app.soft ? row.app.controlEdge : row.app.line
+                clip: true
+                PeqCurve {
+                    anchors.fill: parent
+                    anchors.margins: 2
+                    app: row.app
+                    cells: row.bus.eq || []
+                    on: !!row.bus.eq_on
+                }
+                MouseArea {
+                    id: eqMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: row.app.openEq("bus", row.busIndex)
+                }
+            }
+        }
         RowLayout {
             spacing: 8
             Chip {

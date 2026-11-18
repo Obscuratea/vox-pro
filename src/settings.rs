@@ -1,6 +1,7 @@
 //! The mixer layout the user builds, saved as JSON in ~/.config/vox-pro/settings.json.
 //! The UI owns the settings and sends a full copy to the engine on every change.
 
+use crate::peq::{self, Cell};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -39,10 +40,14 @@ pub struct Strip {
     /// Duck what the B mics carry / what the A buses play.
     pub duck_b: bool,
     pub duck_a: bool,
-    /// Three-band EQ (bell filters): frequency and gain of the low, mid and high bands.
+    /// Parametric EQ: six cells (see peq.rs).
     pub eq_on: bool,
-    pub eq_hz: [f32; 3],
-    pub eq_db: [f32; 3],
+    pub eq: Vec<Cell>,
+    /// The three-band EQ of 0.1.0, read from old saves and turned into the first cells. Never written.
+    #[serde(skip_serializing)]
+    pub eq_hz: Option<[f32; 3]>,
+    #[serde(skip_serializing)]
+    pub eq_db: Option<[f32; 3]>,
     /// Compressor: evens out loud and quiet parts of the voice.
     pub comp_on: bool,
     pub comp_threshold_db: f32,
@@ -77,8 +82,9 @@ impl Default for Strip {
             duck_b: true,
             duck_a: false,
             eq_on: false,
-            eq_hz: [250.0, 1000.0, 3500.0],
-            eq_db: [0.0; 3],
+            eq: peq::default_cells(),
+            eq_hz: None,
+            eq_db: None,
             comp_on: false,
             comp_threshold_db: -18.0,
             comp_ratio: 3.0,
@@ -103,6 +109,9 @@ pub struct Bus {
     /// Brickwall limiter: nothing leaves this output louder than `limiter_db`.
     pub limiter_on: bool,
     pub limiter_db: f32,
+    /// Parametric EQ on what this output plays: six cells (see peq.rs).
+    pub eq_on: bool,
+    pub eq: Vec<Cell>,
 }
 
 impl Default for Bus {
@@ -115,6 +124,8 @@ impl Default for Bus {
             mute: false,
             limiter_on: false,
             limiter_db: -1.0,
+            eq_on: false,
+            eq: peq::default_cells(),
         }
     }
 }
@@ -237,10 +248,15 @@ impl Settings {
             strip.pitch_semitones = strip.pitch_semitones.clamp(-12.0, 12.0);
             strip.duck_threshold_db = strip.duck_threshold_db.clamp(-80.0, -6.0);
             strip.duck_db = strip.duck_db.clamp(-30.0, 0.0);
-            for i in 0..3 {
-                strip.eq_hz[i] = strip.eq_hz[i].clamp(40.0, 12_000.0);
-                strip.eq_db[i] = strip.eq_db[i].clamp(-12.0, 12.0);
+            // A save from 0.1.0 has three bells instead of cells: carry them over as cells 2, 3 and 5.
+            if let (Some(hz), Some(db)) = (strip.eq_hz.take(), strip.eq_db.take()) {
+                if strip.eq == peq::default_cells() {
+                    for (band, cell) in [1usize, 2, 4].into_iter().enumerate() {
+                        strip.eq[cell] = Cell { on: true, kind: "peak".into(), hz: hz[band], db: db[band], q: 1.0 };
+                    }
+                }
             }
+            peq::sanitize(&mut strip.eq);
             strip.comp_threshold_db = strip.comp_threshold_db.clamp(-60.0, 0.0);
             strip.comp_ratio = strip.comp_ratio.clamp(1.0, 20.0);
             strip.comp_attack_ms = strip.comp_attack_ms.clamp(0.5, 200.0);
@@ -252,11 +268,16 @@ impl Settings {
             bus.label = d.label.clone();
             bus.gain_db = bus.gain_db.clamp(-60.0, 12.0);
             bus.limiter_db = bus.limiter_db.clamp(-24.0, 0.0);
+            peq::sanitize(&mut bus.eq);
         }
         if !matches!(s.record_format.as_str(), "wav" | "flac" | "opus") {
             s.record_format = default_format();
         }
         s.scenes.truncate(MAX_SCENES);
+        for scene in s.scenes.iter_mut() {
+            scene.strips.iter_mut().for_each(|strip| peq::sanitize(&mut strip.eq));
+            scene.buses.iter_mut().for_each(|bus| peq::sanitize(&mut bus.eq));
+        }
         s
     }
 
@@ -322,6 +343,16 @@ mod tests {
         assert_eq!(s.strips.len(), STRIPS);
         assert_eq!((s.strips[0].source.as_str(), s.strips[0].gain_db), ("quadcast", -6.0));
         assert_eq!(s.strips[3], Settings::default().strips[3]);
+    }
+
+    #[test]
+    fn the_three_band_eq_of_old_saves_becomes_cells() {
+        let old = r#"{"strips":[{"label":"Mic","eq_on":true,"eq_hz":[300.0,1200.0,4000.0],"eq_db":[-2.0,0.0,3.0]}],"buses":[]}"#;
+        let s = Settings::from_json(old).expect("old save loads");
+        let eq = &s.strips[0].eq;
+        assert_eq!(eq.len(), peq::CELLS);
+        assert_eq!((eq[1].hz, eq[1].db, eq[4].hz, eq[4].db), (300.0, -2.0, 4000.0, 3.0));
+        assert!(!s.to_json().contains("eq_hz"));
     }
 
     #[test]

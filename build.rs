@@ -29,6 +29,8 @@ fn main() {
         "qml/Tray.qml",
         "qml/Knob.qml",
         "qml/EqPanel.qml",
+        "qml/PeqCurve.qml",
+        "qml/PeqEditor.qml",
         "qml/DynamicsPanel.qml",
     ]))
     .file("src/bridge.rs")

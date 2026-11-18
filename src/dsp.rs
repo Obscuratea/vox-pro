@@ -1,6 +1,7 @@
-//! Per-strip voice processing: a noise gate, bass and brightness shelves, a three-band EQ, a compressor, then pitch.
+//! Per-strip voice processing: a noise gate, bass and brightness shelves, a parametric EQ, a compressor, then pitch.
 //! Everything works on interleaved stereo frames at a fixed sample rate.
 
+use crate::peq::{Cell, Peq};
 use crate::stretch::{self, SoundTouch};
 use std::collections::VecDeque;
 
@@ -67,24 +68,6 @@ impl Shelf {
         self.b2 = b2 / a0;
         self.a1 = a1 / a0;
         self.a2 = a2 / a0;
-    }
-
-    /// A bell filter (RBJ peaking EQ) at `freq` with `gain_db` boost or cut. Keeps the filter state.
-    pub fn set_peaking(&mut self, freq: f32, gain_db: f32, q: f32) {
-        if gain_db.abs() < 0.05 {
-            *self = Self { z1: self.z1, z2: self.z2, ..Self::default() };
-            return;
-        }
-        let a = 10f32.powf(gain_db / 40.0);
-        let w0 = 2.0 * std::f32::consts::PI * freq.clamp(20.0, SAMPLE_RATE * 0.45) / SAMPLE_RATE;
-        let (sin, cos) = w0.sin_cos();
-        let alpha = sin / (2.0 * q);
-        let a0 = 1.0 + alpha / a;
-        self.b0 = (1.0 + alpha * a) / a0;
-        self.b1 = -2.0 * cos / a0;
-        self.b2 = (1.0 - alpha * a) / a0;
-        self.a1 = -2.0 * cos / a0;
-        self.a2 = (1.0 - alpha / a) / a0;
     }
 
     fn process(&mut self, ch: usize, x: f32) -> f32 {
@@ -288,9 +271,7 @@ pub struct Voice {
     brightness: Shelf,
     gate: Gate,
     pitch: PitchStage,
-    /// Three bell filters, or none while the EQ is off.
-    eq: [Shelf; 3],
-    eq_on: bool,
+    eq: Peq,
     comp: Compressor,
     comp_on: bool,
 }
@@ -302,15 +283,8 @@ impl Voice {
         self.pitch.set_semitones(pitch_semitones);
     }
 
-    /// The three EQ bells as (frequency, gain dB), or `None` with the EQ off.
-    pub fn set_eq(&mut self, bands: Option<[(f32, f32); 3]>) {
-        self.eq_on = bands.is_some();
-        for (i, filter) in self.eq.iter_mut().enumerate() {
-            match bands {
-                Some(b) => filter.set_peaking(b[i].0, b[i].1, 1.0),
-                None => filter.set_peaking(1000.0, 0.0, 1.0),
-            }
-        }
+    pub fn set_eq(&mut self, on: bool, cells: &[Cell]) {
+        self.eq.set(on, cells);
     }
 
     pub fn set_comp(&mut self, params: Option<CompParams>) {
@@ -335,14 +309,10 @@ impl Voice {
         };
         let mut out = [0.0; 2];
         for ch in 0..2 {
-            let x = frame[ch] * g;
-            let mut y = self.brightness.process(ch, self.bass.process(ch, x));
-            if self.eq_on {
-                for band in self.eq.iter_mut() {
-                    y = band.process(ch, y);
-                }
-            }
-            out[ch] = y;
+            out[ch] = self.brightness.process(ch, self.bass.process(ch, frame[ch] * g));
+        }
+        if self.eq.is_on() {
+            out = self.eq.process(out);
         }
         if self.comp_on {
             let c = self.comp.gain(out[0], out[1]);
@@ -474,10 +444,12 @@ mod pro_tests {
     }
 
     #[test]
-    fn eq_bell_boosts_its_band_and_leaves_others() {
+    fn the_strip_eq_shapes_the_voice() {
         let run = |hz: f32| {
             let mut v = Voice::default();
-            v.set_eq(Some([(1000.0, 9.0), (250.0, 0.0), (3500.0, 0.0)]));
+            let mut cells = crate::peq::default_cells();
+            cells[2] = Cell { on: true, kind: "peak".into(), hz: 1000.0, db: 9.0, q: 1.0 };
+            v.set_eq(true, &cells);
             let out: Vec<f32> = tone(0.1, hz, 24_000).into_iter().map(|f| v.process(f, None)[0]).collect();
             rms(&out[12_000..]) / (0.1 / std::f32::consts::SQRT_2)
         };

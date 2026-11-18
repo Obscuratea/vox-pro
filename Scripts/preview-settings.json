@@ -28,22 +28,56 @@
    "duck_b": true,
    "duck_a": false,
    "eq_on": true,
-   "eq_hz": [
-    250,
-    1000,
-    3500
-   ],
-   "eq_db": [
-    -2,
-    0,
-    3
-   ],
    "comp_on": true,
    "comp_threshold_db": -18,
    "comp_ratio": 3,
    "comp_attack_ms": 10,
    "comp_release_ms": 120,
-   "comp_makeup_db": 0
+   "comp_makeup_db": 0,
+   "eq": [
+    {
+     "on": true,
+     "kind": "highpass",
+     "hz": 90,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": -2,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 2.5,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 4,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 2,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "Input 2",
@@ -73,22 +107,56 @@
    "duck_b": true,
    "duck_a": false,
    "eq_on": false,
-   "eq_hz": [
-    250,
-    1000,
-    3500
-   ],
-   "eq_db": [
-    0,
-    0,
-    0
-   ],
    "comp_on": false,
    "comp_threshold_db": -18,
    "comp_ratio": 3,
    "comp_attack_ms": 10,
    "comp_release_ms": 120,
-   "comp_makeup_db": 0
+   "comp_makeup_db": 0,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 0,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "Input 3",
@@ -118,22 +186,56 @@
    "duck_b": true,
    "duck_a": false,
    "eq_on": false,
-   "eq_hz": [
-    250,
-    1000,
-    3500
-   ],
-   "eq_db": [
-    0,
-    0,
-    0
-   ],
    "comp_on": false,
    "comp_threshold_db": -18,
    "comp_ratio": 3,
    "comp_attack_ms": 10,
    "comp_release_ms": 120,
-   "comp_makeup_db": 0
+   "comp_makeup_db": 0,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 0,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "Apps",
@@ -163,22 +265,56 @@
    "duck_b": true,
    "duck_a": false,
    "eq_on": false,
-   "eq_hz": [
-    250,
-    1000,
-    3500
-   ],
-   "eq_db": [
-    0,
-    0,
-    0
-   ],
    "comp_on": false,
    "comp_threshold_db": -18,
    "comp_ratio": 3,
    "comp_attack_ms": 10,
    "comp_release_ms": 120,
-   "comp_makeup_db": 0
+   "comp_makeup_db": 0,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 0,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "Media",
@@ -208,22 +344,56 @@
    "duck_b": true,
    "duck_a": false,
    "eq_on": true,
-   "eq_hz": [
-    250,
-    1000,
-    3500
-   ],
-   "eq_db": [
-    0,
-    -3,
-    2
-   ],
    "comp_on": false,
    "comp_threshold_db": -18,
    "comp_ratio": 3,
    "comp_attack_ms": 10,
    "comp_release_ms": 120,
-   "comp_makeup_db": 0
+   "comp_makeup_db": 0,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": -3,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": -2,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 2.5,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 4,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 2,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "Game",
@@ -253,22 +423,56 @@
    "duck_b": true,
    "duck_a": false,
    "eq_on": false,
-   "eq_hz": [
-    250,
-    1000,
-    3500
-   ],
-   "eq_db": [
-    0,
-    0,
-    0
-   ],
    "comp_on": true,
    "comp_threshold_db": -18,
    "comp_ratio": 4,
    "comp_attack_ms": 10,
    "comp_release_ms": 120,
-   "comp_makeup_db": 0
+   "comp_makeup_db": 0,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 0,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "Chat",
@@ -298,22 +502,56 @@
    "duck_b": true,
    "duck_a": false,
    "eq_on": false,
-   "eq_hz": [
-    250,
-    1000,
-    3500
-   ],
-   "eq_db": [
-    0,
-    0,
-    0
-   ],
    "comp_on": false,
    "comp_threshold_db": -18,
    "comp_ratio": 3,
    "comp_attack_ms": 10,
    "comp_release_ms": 120,
-   "comp_makeup_db": 0
+   "comp_makeup_db": 0,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 0,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "Browser",
@@ -343,22 +581,56 @@
    "duck_b": true,
    "duck_a": false,
    "eq_on": false,
-   "eq_hz": [
-    250,
-    1000,
-    3500
-   ],
-   "eq_db": [
-    0,
-    0,
-    0
-   ],
    "comp_on": false,
    "comp_threshold_db": -18,
    "comp_ratio": 3,
    "comp_attack_ms": 10,
    "comp_release_ms": 120,
-   "comp_makeup_db": 0
+   "comp_makeup_db": 0,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 0,
+     "q": 0.71
+    }
+   ]
   }
  ],
  "buses": [
@@ -369,7 +641,52 @@
    "gain_db": 0.0,
    "mute": false,
    "limiter_on": true,
-   "limiter_db": -1
+   "limiter_db": -1,
+   "eq_on": true,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 4,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 450,
+     "db": -5,
+     "q": 2.2
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 3,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 5,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "A2",
@@ -378,7 +695,52 @@
    "gain_db": 0.0,
    "mute": false,
    "limiter_on": false,
-   "limiter_db": -1
+   "limiter_db": -1,
+   "eq_on": false,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 0,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "A3",
@@ -387,7 +749,52 @@
    "gain_db": 0.0,
    "mute": false,
    "limiter_on": false,
-   "limiter_db": -1
+   "limiter_db": -1,
+   "eq_on": false,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 0,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "A4",
@@ -396,7 +803,52 @@
    "gain_db": 0.0,
    "mute": false,
    "limiter_on": false,
-   "limiter_db": -1
+   "limiter_db": -1,
+   "eq_on": false,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 0,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "A5",
@@ -405,7 +857,52 @@
    "gain_db": 0.0,
    "mute": false,
    "limiter_on": false,
-   "limiter_db": -1
+   "limiter_db": -1,
+   "eq_on": false,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 0,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "B1",
@@ -414,7 +911,52 @@
    "gain_db": 0.0,
    "mute": false,
    "limiter_on": false,
-   "limiter_db": -1
+   "limiter_db": -1,
+   "eq_on": true,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": -4,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 3,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": -2,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "B2",
@@ -423,7 +965,52 @@
    "gain_db": 0.0,
    "mute": false,
    "limiter_on": false,
-   "limiter_db": -1
+   "limiter_db": -1,
+   "eq_on": false,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 0,
+     "q": 0.71
+    }
+   ]
   },
   {
    "label": "B3",
@@ -432,7 +1019,52 @@
    "gain_db": 0.0,
    "mute": false,
    "limiter_on": false,
-   "limiter_db": -1
+   "limiter_db": -1,
+   "eq_on": false,
+   "eq": [
+    {
+     "on": true,
+     "kind": "lowshelf",
+     "hz": 80,
+     "db": 0,
+     "q": 0.71
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 200,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 600,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 2000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "peak",
+     "hz": 5000,
+     "db": 0,
+     "q": 1
+    },
+    {
+     "on": true,
+     "kind": "highshelf",
+     "hz": 10000,
+     "db": 0,
+     "q": 0.71
+    }
+   ]
   }
  ],
  "theme": "pro",

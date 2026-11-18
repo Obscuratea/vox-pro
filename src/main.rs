@@ -2,6 +2,7 @@ mod bridge;
 mod dsp;
 mod engine;
 mod icons;
+mod peq;
 mod recorder;
 mod settings;
 mod shortcuts;

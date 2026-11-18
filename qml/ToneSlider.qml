@@ -11,6 +11,7 @@ Item {
     property real to: 12
     property real resetValue: 0
     property real step: 0.5
+    property real wheelStep: step
     property var format: value => app.db(value)
     signal moved(real value)
 
@@ -106,6 +107,6 @@ Item {
                 tone.moved(tone.clamped(startValue + (mouse.x - startX) / rail.width * (tone.to - tone.from)));
         }
         onDoubleClicked: tone.moved(tone.resetValue)
-        onWheel: wheel => tone.moved(tone.clamped(tone.value + (wheel.angleDelta.y > 0 ? 0.5 : -0.5)))
+        onWheel: wheel => tone.moved(tone.clamped(tone.value + (wheel.angleDelta.y > 0 ? tone.wheelStep : -tone.wheelStep)))
     }
 }
