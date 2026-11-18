@@ -31,6 +31,9 @@ fn main() {
         "qml/EqPanel.qml",
         "qml/PeqCurve.qml",
         "qml/PeqEditor.qml",
+        "qml/PluginRack.qml",
+        "qml/Tabs.qml",
+        "qml/FxPanel.qml",
         "qml/DynamicsPanel.qml",
     ]))
     .file("src/bridge.rs")

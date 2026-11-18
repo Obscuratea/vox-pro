@@ -58,6 +58,21 @@ pub mod qobject {
         #[qinvokable]
         fn licenses(self: &Mixer) -> QString;
 
+        // Plugins (see plugins.rs): the list of usable LV2 plugins ("" while the first scan runs), one plugin's
+        // controls, and whether plugins are switched off after a crash (and switching them back on).
+        #[qinvokable]
+        #[cxx_name = "pluginCatalog"]
+        fn plugin_catalog(self: &Mixer) -> QString;
+        #[qinvokable]
+        #[cxx_name = "pluginInfo"]
+        fn plugin_info(self: &Mixer, uri: &QString) -> QString;
+        #[qinvokable]
+        #[cxx_name = "pluginsSafeMode"]
+        fn plugins_safe_mode(self: &Mixer) -> bool;
+        #[qinvokable]
+        #[cxx_name = "pluginsResume"]
+        fn plugins_resume(self: &Mixer);
+
         // Updates: `updateStatus` is JSON ({state, current, latest, notes, progress, message}); the other
         // three start work on a thread. See updater.rs.
         #[qinvokable]
@@ -164,6 +179,23 @@ impl qobject::Mixer {
 
     fn licenses(&self) -> qobject::QString {
         qobject::QString::from(include_str!("../THIRD_PARTY.txt"))
+    }
+
+    fn plugin_catalog(&self) -> qobject::QString {
+        qobject::QString::from(&crate::plugins::host().catalog())
+    }
+
+    fn plugin_info(&self, uri: &qobject::QString) -> qobject::QString {
+        qobject::QString::from(&crate::plugins::host().info(&uri.to_string()))
+    }
+
+    fn plugins_safe_mode(&self) -> bool {
+        crate::plugins::host().safe_mode()
+    }
+
+    fn plugins_resume(&self) {
+        crate::plugins::host().leave_safe_mode();
+        let _ = state().engine.sender.lock().unwrap().send(Command::ReloadPlugins);
     }
 
     fn update_status(&self) -> qobject::QString {

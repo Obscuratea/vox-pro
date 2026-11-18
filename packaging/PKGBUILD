@@ -6,8 +6,9 @@ pkgrel=9
 pkgdesc='Voice and audio mixer for PipeWire, with 8 strips, EQ, compressors, limiters and recording (Voicemeeter Potato style)'
 arch=('x86_64')
 license=('custom')
-depends=('pipewire' 'wireplumber' 'qt6-base' 'qt6-declarative' 'libnotify' 'soundtouch' 'curl' 'polkit')
+depends=('pipewire' 'wireplumber' 'qt6-base' 'qt6-declarative' 'libnotify' 'soundtouch' 'curl' 'polkit' 'lilv')
 makedepends=('cargo' 'clang' 'cmake')
+optdepends=('lsp-plugins-lv2: a large set of LV2 effects for the plugin rack' 'calf: LV2 effects (reverb, de-esser and more)' 'x42-plugins: LV2 effects')
 # makepkg's LTO flags don't mix well with the Rust + C++ (cxx-qt) build.
 options=('!lto' '!debug')
 source=()

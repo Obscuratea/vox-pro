@@ -11,7 +11,7 @@ Rectangle {
     readonly property bool sendsToMic: strip.routes[5] || strip.routes[6] || strip.routes[7]
     readonly property bool isApps: strip.virtual_input && strip.label === "Apps"
     // Voice effects live on the back of mic strips. The front only shows whether any of them is on.
-    readonly property bool effectsOn: strip.eq_on || strip.comp_on
+    readonly property bool effectsOn: strip.eq_on || strip.comp_on || (strip.plugins || []).some(p => p.on)
         || (!strip.virtual_input && (strip.gate_on || strip.duck_on || strip.bass_db !== 0 || strip.brightness_db !== 0 || strip.pitch_semitones !== 0))
     // Virtual strips (Apps, Media) flip to the list of programs using them; the dot says someone is.
     readonly property var playing: strip.virtual_input ? app.streams.filter(s => s.target === strip.label.toLowerCase()) : []
@@ -21,7 +21,7 @@ Rectangle {
         const i = Qt.application.arguments.indexOf("--tab");
         if (i < 0) return 0;
         const v = Qt.application.arguments[i + 1];
-        return v === "mix" ? index % 3 : parseInt(v);
+        return v === "mix" ? index % 4 : parseInt(v);
     }
     readonly property real reduction: app.meters.comp ? (app.meters.comp[index] || 0) : 0
     function hz(v) { return v >= 1000 ? (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + " kHz" : Math.round(v) + " Hz"; }
@@ -295,21 +295,12 @@ Rectangle {
             }
         }
 
-        RowLayout {
+        Tabs {
             Layout.fillWidth: true
-            spacing: 5
-            Repeater {
-                model: ["Voice", "EQ", "Dynamics"]
-                Chip {
-                    required property int index
-                    required property string modelData
-                    Layout.fillWidth: true
-                    app: card.app
-                    text: card.app.t(modelData)
-                    checked: card.tab === index
-                    onToggled: card.tab = index
-                }
-            }
+            app: card.app
+            model: ["Voice", "EQ", "Comp", "FX"]
+            current: card.tab
+            onPicked: i => card.tab = i
         }
 
         ColumnLayout {
@@ -429,6 +420,7 @@ Rectangle {
 
         EqPanel { visible: card.tab === 1; card: card; Layout.fillWidth: true }
         DynamicsPanel { visible: card.tab === 2; card: card; Layout.fillWidth: true }
+        FxPanel { visible: card.tab === 3; card: card; Layout.fillWidth: true }
         Item { Layout.fillHeight: true }
         Text {
             Layout.fillWidth: true
@@ -461,21 +453,12 @@ Rectangle {
                 elide: Text.ElideRight
             }
         }
-        RowLayout {
+        Tabs {
             Layout.fillWidth: true
-            spacing: 5
-            Repeater {
-                model: ["Programs", "EQ", "Dynamics"]
-                Chip {
-                    required property int index
-                    required property string modelData
-                    Layout.fillWidth: true
-                    app: card.app
-                    text: card.app.t(modelData)
-                    checked: card.tab === index
-                    onToggled: card.tab = index
-                }
-            }
+            app: card.app
+            model: ["Programs", "EQ", "Comp", "FX"]
+            current: card.tab
+            onPicked: i => card.tab = i
         }
         ColumnLayout {
             visible: card.tab === 0
@@ -515,6 +498,7 @@ Rectangle {
         }
         EqPanel { visible: card.tab === 1; card: card; Layout.fillWidth: true }
         DynamicsPanel { visible: card.tab === 2; card: card; Layout.fillWidth: true }
+        FxPanel { visible: card.tab === 3; card: card; Layout.fillWidth: true }
         Item { visible: card.tab !== 0; Layout.fillHeight: true }
         Text {
             visible: card.tab !== 0

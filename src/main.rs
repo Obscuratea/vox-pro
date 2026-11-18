@@ -3,6 +3,7 @@ mod dsp;
 mod engine;
 mod icons;
 mod peq;
+mod plugins;
 mod recorder;
 mod settings;
 mod shortcuts;

@@ -2,6 +2,7 @@
 //! The UI owns the settings and sends a full copy to the engine on every change.
 
 use crate::peq::{self, Cell};
+use crate::plugins::{self, Slot};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -48,6 +49,8 @@ pub struct Strip {
     pub eq_hz: Option<[f32; 3]>,
     #[serde(skip_serializing)]
     pub eq_db: Option<[f32; 3]>,
+    /// LV2 plugins, run in order after the EQ and compressor (see plugins.rs).
+    pub plugins: Vec<Slot>,
     /// Compressor: evens out loud and quiet parts of the voice.
     pub comp_on: bool,
     pub comp_threshold_db: f32,
@@ -85,6 +88,7 @@ impl Default for Strip {
             eq: peq::default_cells(),
             eq_hz: None,
             eq_db: None,
+            plugins: Vec::new(),
             comp_on: false,
             comp_threshold_db: -18.0,
             comp_ratio: 3.0,
@@ -112,6 +116,8 @@ pub struct Bus {
     /// Parametric EQ on what this output plays: six cells (see peq.rs).
     pub eq_on: bool,
     pub eq: Vec<Cell>,
+    /// LV2 plugins on the mix, before the EQ.
+    pub plugins: Vec<Slot>,
 }
 
 impl Default for Bus {
@@ -126,6 +132,7 @@ impl Default for Bus {
             limiter_db: -1.0,
             eq_on: false,
             eq: peq::default_cells(),
+            plugins: Vec::new(),
         }
     }
 }
@@ -257,6 +264,7 @@ impl Settings {
                 }
             }
             peq::sanitize(&mut strip.eq);
+            plugins::sanitize(&mut strip.plugins);
             strip.comp_threshold_db = strip.comp_threshold_db.clamp(-60.0, 0.0);
             strip.comp_ratio = strip.comp_ratio.clamp(1.0, 20.0);
             strip.comp_attack_ms = strip.comp_attack_ms.clamp(0.5, 200.0);
@@ -269,14 +277,21 @@ impl Settings {
             bus.gain_db = bus.gain_db.clamp(-60.0, 12.0);
             bus.limiter_db = bus.limiter_db.clamp(-24.0, 0.0);
             peq::sanitize(&mut bus.eq);
+            plugins::sanitize(&mut bus.plugins);
         }
         if !matches!(s.record_format.as_str(), "wav" | "flac" | "opus") {
             s.record_format = default_format();
         }
         s.scenes.truncate(MAX_SCENES);
         for scene in s.scenes.iter_mut() {
-            scene.strips.iter_mut().for_each(|strip| peq::sanitize(&mut strip.eq));
-            scene.buses.iter_mut().for_each(|bus| peq::sanitize(&mut bus.eq));
+            for strip in scene.strips.iter_mut() {
+                peq::sanitize(&mut strip.eq);
+                plugins::sanitize(&mut strip.plugins);
+            }
+            for bus in scene.buses.iter_mut() {
+                peq::sanitize(&mut bus.eq);
+                plugins::sanitize(&mut bus.plugins);
+            }
         }
         s
     }

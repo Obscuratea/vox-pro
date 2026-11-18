@@ -119,6 +119,14 @@ Rectangle {
                     onClicked: row.app.openEq("bus", row.busIndex)
                 }
             }
+            Chip {
+                readonly property int count: (row.bus.plugins || []).filter(p => p.on).length
+                app: row.app
+                text: count > 0 ? row.app.t("FX") + " " + count : row.app.t("FX")
+                checked: count > 0
+                tip: "Plugins on this output"
+                onToggled: row.app.openRack("bus", row.busIndex)
+            }
         }
         RowLayout {
             spacing: 8

@@ -77,6 +77,23 @@
      "db": 2,
      "q": 0.71
     }
+   ],
+   "plugins": [
+    {
+     "uri": "http://calf.sourceforge.net/plugins/Deesser",
+     "name": "Calf Deesser",
+     "on": true,
+     "params": {}
+    },
+    {
+     "uri": "http://calf.sourceforge.net/plugins/Reverb",
+     "name": "Calf Reverb",
+     "on": true,
+     "params": {
+      "decay_time": 2.4,
+      "amount": 0.4
+     }
+    }
    ]
   },
   {
@@ -156,7 +173,8 @@
      "db": 0,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   },
   {
    "label": "Input 3",
@@ -235,7 +253,8 @@
      "db": 0,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   },
   {
    "label": "Apps",
@@ -314,7 +333,8 @@
      "db": 0,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   },
   {
    "label": "Media",
@@ -393,7 +413,8 @@
      "db": 2,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   },
   {
    "label": "Game",
@@ -472,7 +493,8 @@
      "db": 0,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   },
   {
    "label": "Chat",
@@ -551,7 +573,8 @@
      "db": 0,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   },
   {
    "label": "Browser",
@@ -630,7 +653,8 @@
      "db": 0,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   }
  ],
  "buses": [
@@ -686,6 +710,14 @@
      "db": 5,
      "q": 0.71
     }
+   ],
+   "plugins": [
+    {
+     "uri": "http://calf.sourceforge.net/plugins/Reverb",
+     "name": "Calf Reverb",
+     "on": true,
+     "params": {}
+    }
    ]
   },
   {
@@ -740,7 +772,8 @@
      "db": 0,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   },
   {
    "label": "A3",
@@ -794,7 +827,8 @@
      "db": 0,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   },
   {
    "label": "A4",
@@ -848,7 +882,8 @@
      "db": 0,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   },
   {
    "label": "A5",
@@ -902,7 +937,8 @@
      "db": 0,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   },
   {
    "label": "B1",
@@ -956,7 +992,8 @@
      "db": -2,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   },
   {
    "label": "B2",
@@ -1010,7 +1047,8 @@
      "db": 0,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   },
   {
    "label": "B3",
@@ -1064,7 +1102,8 @@
      "db": 0,
      "q": 0.71
     }
-   ]
+   ],
+   "plugins": []
   }
  ],
  "theme": "pro",

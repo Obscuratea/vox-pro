@@ -160,6 +160,29 @@ ApplicationWindow {
     readonly property int eqArg: Qt.application.arguments.indexOf("--eq")
     property var eqTarget: eqArg >= 0 ? { kind: Qt.application.arguments[eqArg + 1].split(":")[0], index: parseInt(Qt.application.arguments[eqArg + 1].split(":")[1]) } : null
     function openEq(kind, index) { eqTarget = { kind: kind, index: index }; }
+    // The plugin rack: which output or strip it is open on (null = closed). `--rack strip:0` is a dev aid for screenshots.
+    readonly property int rackArg: Qt.application.arguments.indexOf("--rack")
+    property var rackTarget: rackArg >= 0 ? { kind: Qt.application.arguments[rackArg + 1].split(":")[0], index: parseInt(Qt.application.arguments[rackArg + 1].split(":")[1]) } : null
+    function openRack(kind, index) { rackTarget = { kind: kind, index: index }; }
+    // Installed LV2 plugins (see plugins.rs). The list is read once the first scan is done; controls are read per plugin and kept.
+    property var pluginList: []
+    property bool pluginsScanned: false
+    function loadPlugins() {
+        if (pluginsScanned) return;
+        const json = mixer.pluginCatalog();
+        if (json !== "") { pluginList = JSON.parse(json); pluginsScanned = true; }
+    }
+    property var pluginInfos: ({})
+    function pluginInfo(uri) {
+        if (!(uri in pluginInfos)) {
+            const json = mixer.pluginInfo(uri);
+            pluginInfos[uri] = json !== "" ? JSON.parse(json) : null;
+        }
+        return pluginInfos[uri];
+    }
+    // Plugins stay off after one crashed Vox while loading, until the user switches them back on.
+    property bool pluginsSafe: mixer.pluginsSafeMode()
+    function resumePlugins() { mixer.pluginsResume(); pluginsSafe = false; }
     function isRecording(bus) { return !!recording[bus] && recording[bus][0] !== "!"; }
     function recordBus(bus, on) { mixer.record(bus, on); }
     property string status: Qt.application.arguments.indexOf("--status") >= 0 ? "System output is now Vox Pro Apps." : ""
@@ -726,6 +749,16 @@ ApplicationWindow {
                 kind: win.eqTarget.kind
                 index: win.eqTarget.index
                 onDone: win.eqTarget = null
+            }
+        }
+        Loader {
+            anchors.fill: parent
+            active: win.rackTarget !== null
+            sourceComponent: PluginRack {
+                app: win
+                kind: win.rackTarget.kind
+                index: win.rackTarget.index
+                onDone: win.rackTarget = null
             }
         }
     }

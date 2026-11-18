@@ -15,7 +15,7 @@ Item {
     property var format: value => app.db(value)
     signal moved(real value)
 
-    readonly property bool centered: from < 0 && to > 0
+    property bool centered: from < 0 && to > 0
     readonly property real handle: app.soft ? 14 : 10
 
     implicitWidth: 180

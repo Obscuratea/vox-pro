@@ -11,6 +11,7 @@
 
 use crate::recorder::{Format, Recorder};
 use crate::dsp::{CompParams, SAMPLE_RATE, Voice, db_to_lin};
+use crate::plugins::{self, Chain, Slot, Target};
 use crate::settings::{A_BUSES, BUSES, STRIPS, Settings};
 use pipewire as pw;
 use pw::properties::properties;
@@ -120,6 +121,10 @@ pub enum Command {
     MoveStream(u32, String),
     /// Start or stop recording one output (by bus index) to a file.
     Record(usize, bool),
+    /// A plugin chain the plugin thread finished building, for this strip or output.
+    Chain(Target, Chain),
+    /// Plugins were switched back on after a crash: load what the settings ask for.
+    ReloadPlugins,
 }
 
 pub struct Handle {
@@ -131,10 +136,11 @@ pub fn start(settings: Settings) -> Handle {
     let shared = Arc::new(Shared::new());
     let (sender, receiver) = pw::channel::channel();
     let thread_shared = shared.clone();
+    let thread_sender = sender.clone();
     std::thread::Builder::new()
         .name("vox-pipewire".into())
         .spawn(move || {
-            if let Err(e) = run(settings, thread_shared.clone(), receiver) {
+            if let Err(e) = run(settings, thread_shared.clone(), receiver, thread_sender) {
                 eprintln!("vox-pro: PipeWire engine stopped: {e}");
                 *thread_shared.status.lock().unwrap() =
                     "Can't reach PipeWire. Is it running? Restart Vox once it is.".into();
@@ -171,6 +177,47 @@ struct StripState {
     /// The same audio before the pitch shifter, for A buses set to hear the natural voice.
     dry_ring: Ring,
     gain: f32,
+    plugins: PluginSeat,
+}
+
+/// The plugin chain of one strip or output, and what has been asked of the plugin thread.
+#[derive(Default)]
+struct PluginSeat {
+    chain: Chain,
+    /// The plugins (by URI, in order) of the build that is under way, if any.
+    pending: Option<Vec<String>>,
+}
+
+impl PluginSeat {
+    /// Make the chain follow the settings: new control values at once, a new build if the plugins changed.
+    fn follow(&mut self, target: Target, slots: &[Slot], sender: &pw::channel::Sender<Command>) {
+        if self.chain.matches(slots) {
+            self.chain.apply(slots);
+            self.pending = None;
+            return;
+        }
+        let wanted: Vec<String> = slots.iter().map(|s| s.uri.clone()).collect();
+        if self.pending.as_ref() == Some(&wanted) || plugins::host().safe_mode() {
+            return;
+        }
+        self.pending = Some(wanted);
+        let sender = sender.clone();
+        plugins::host().build(slots.to_vec(), Box::new(move |chain| {
+            let _ = sender.send(Command::Chain(target, chain));
+        }));
+    }
+
+    /// A finished build arrived. It is used if it is still what the settings ask for.
+    fn install(&mut self, chain: Chain, slots: &[Slot]) {
+        if chain.matches(slots) {
+            let old = std::mem::replace(&mut self.chain, chain);
+            self.chain.apply(slots);
+            self.pending = None;
+            plugins::host().discard(old);
+        } else {
+            plugins::host().discard(chain);
+        }
+    }
 }
 
 struct BusState {
@@ -185,6 +232,7 @@ struct BusState {
     /// Ducking gain per strip (1 = not ducked), eased per sample: down fast, back up slowly.
     duck_gain: [f32; STRIPS],
     gain: f32,
+    plugins: PluginSeat,
 }
 
 struct Mixer {
@@ -234,9 +282,10 @@ impl Mixer {
                     ring: Ring { frames: vec![[0.0; 2]; RING], write: 0 },
                     dry_ring: Ring { frames: vec![[0.0; 2]; RING], write: 0 },
                     gain: 0.0,
+                    plugins: PluginSeat::default(),
                 })
                 .collect(),
-            buses: (0..BUSES).map(|_| BusState { cursors: [0; STRIPS], ptt_gate: [1.0; STRIPS], duck_gain: [1.0; STRIPS], eq: Default::default(), limit: 1.0, gain: 0.0 }).collect(),
+            buses: (0..BUSES).map(|_| BusState { cursors: [0; STRIPS], ptt_gate: [1.0; STRIPS], duck_gain: [1.0; STRIPS], eq: Default::default(), limit: 1.0, gain: 0.0, plugins: PluginSeat::default() }).collect(),
             scratch: Vec::new(),
             block: Vec::new(),
             dry: Vec::new(),
@@ -257,6 +306,7 @@ impl Mixer {
             let input = [read_f32(&frame[0..4]), read_f32(&frame[4..8])];
             self.block.push(state.voice.process(input, gate));
         }
+        state.plugins.chain.process(&mut self.block);
         self.dry.clear();
         self.dry.extend_from_slice(&self.block);
         // Nobody hears a muted strip or one routed nowhere, so don't run the pitch shifter for it.
@@ -356,6 +406,7 @@ impl Mixer {
             state.limit = 1.0;
         }
         let mut deepest = 1.0f32;
+        state.plugins.chain.process(&mut self.scratch);
         if state.eq.is_on() {
             for frame in self.scratch.iter_mut() {
                 *frame = state.eq.process(*frame);
@@ -613,9 +664,16 @@ fn apply(
     present: &dyn Fn(&str) -> bool,
     new: Settings,
     first: bool,
+    sender: &pw::channel::Sender<Command>,
 ) {
     let old = {
         let mut m = mixer.borrow_mut();
+        for (i, (state, strip)) in m.strips.iter_mut().zip(&new.strips).enumerate() {
+            state.plugins.follow(Target::Strip(i), &strip.plugins, sender);
+        }
+        for (i, (state, bus)) in m.buses.iter_mut().zip(&new.buses).enumerate() {
+            state.plugins.follow(Target::Bus(i), &bus.plugins, sender);
+        }
         for (state, strip) in m.strips.iter_mut().zip(&new.strips) {
             state.voice.configure(strip.bass_db, strip.brightness_db, strip.pitch_semitones);
             state.voice.set_eq(strip.eq_on, &strip.eq);
@@ -786,7 +844,12 @@ fn publish_devices(nodes: &HashMap<u32, NodeInfo>, shared: &Shared) {
     *shared.devices.lock().unwrap() = devices;
 }
 
-fn run(settings: Settings, shared: Arc<Shared>, receiver: pw::channel::Receiver<Command>) -> Result<(), pw::Error> {
+fn run(
+    settings: Settings,
+    shared: Arc<Shared>,
+    receiver: pw::channel::Receiver<Command>,
+    sender: pw::channel::Sender<Command>,
+) -> Result<(), pw::Error> {
     pw::init();
     let mainloop = pw::main_loop::MainLoopRc::new(None)?;
     let context = pw::context::ContextRc::new(&mainloop, None)?;
@@ -1023,13 +1086,14 @@ fn run(settings: Settings, shared: Arc<Shared>, receiver: pw::channel::Receiver<
         .done({
             let (core, mixer, streams, ready, present, first) =
                 (core.clone(), mixer.clone(), streams.clone(), ready.clone(), present.clone(), first_settings.clone());
+            let sender = sender.clone();
             move |id, seq| {
                 if id != 0 || seq != barrier || ready.get() {
                     return;
                 }
                 ready.set(true);
                 if let Some(settings) = first.borrow_mut().take() {
-                    apply(&core, &mixer, &mut streams.borrow_mut(), &*present, settings, true);
+                    apply(&core, &mixer, &mut streams.borrow_mut(), &*present, settings, true, &sender);
                 }
             }
         })
@@ -1055,13 +1119,31 @@ fn run(settings: Settings, shared: Arc<Shared>, receiver: pw::channel::Receiver<
         move |command| match command {
             Command::Apply(settings) => {
                 if ready.get() {
-                    apply(&core, &mixer, &mut streams.borrow_mut(), &*present, settings, false);
+                    apply(&core, &mixer, &mut streams.borrow_mut(), &*present, settings, false, &sender);
                 } else {
                     // Still waiting for the first listing: the newest settings are the ones to start with.
                     *first.borrow_mut() = Some(settings);
                 }
             }
             Command::Record(bus, on) => mixer.borrow_mut().set_recording(bus, on),
+            Command::Chain(target, chain) => {
+                let mut m = mixer.borrow_mut();
+                let m = &mut *m;
+                match target {
+                    Target::Strip(i) => m.strips[i].plugins.install(chain, &m.settings.strips[i].plugins),
+                    Target::Bus(i) => m.buses[i].plugins.install(chain, &m.settings.buses[i].plugins),
+                }
+            }
+            Command::ReloadPlugins => {
+                let mut m = mixer.borrow_mut();
+                let m = &mut *m;
+                for (i, state) in m.strips.iter_mut().enumerate() {
+                    state.plugins.follow(Target::Strip(i), &m.settings.strips[i].plugins, &sender);
+                }
+                for (i, state) in m.buses.iter_mut().enumerate() {
+                    state.plugins.follow(Target::Bus(i), &m.settings.buses[i].plugins, &sender);
+                }
+            }
             Command::MuteStream(id, muted) => {
                 if let Some(stream) = apps.borrow().get(&id) {
                     set_mute(stream, muted);
