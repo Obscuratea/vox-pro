@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls.Basic
 
 // One input: where the sound comes from, how loud it is, where it goes, and voice shaping.
 Rectangle {
@@ -27,7 +28,7 @@ Rectangle {
     function hz(v) { return v >= 1000 ? (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + " kHz" : Math.round(v) + " Hz"; }
     property real turn: Qt.application.arguments.indexOf("--flip") >= 0 ? 180 : 0   // degrees; --flip is a dev aid for screenshots
     readonly property bool showingBack: turn >= 90
-    readonly property int flipBelow: 70   // room under the flip/Done button, for the hint text on the front
+    readonly property int flipBelow: 0
     Behavior on turn { NumberAnimation { duration: 380; easing.type: Easing.InOutCubic } }
     transform: Rotation {
         origin.x: card.width / 2
@@ -148,12 +149,26 @@ Rectangle {
             }
         }
 
-        Text {
-            text: card.app.t("Send to mic")
-            color: card.app.dim
-            font.family: card.app.mono
-            font.pixelSize: 10
-            font.letterSpacing: 1
+        RowLayout {
+            spacing: 6
+            Text {
+                text: card.app.t("Send to mic")
+                color: card.app.dim
+                font.family: card.app.mono
+                font.pixelSize: 10
+                font.letterSpacing: 1
+            }
+            // Apps carries everything, voice chat included, so warn while it goes to a mic.
+            Text {
+                visible: card.strip.virtual_input && card.isApps && card.sendsToMic
+                text: "⚠ echo"
+                color: card.app.warning
+                font.pixelSize: 10
+                font.weight: Font.DemiBold
+                HoverHandler { id: echoHover }
+                ToolTip.visible: echoHover.hovered
+                ToolTip.text: "Voice chat playing through Apps also goes into this mic, so people may hear themselves"
+            }
         }
         GridLayout {
             Layout.fillWidth: true
@@ -197,38 +212,10 @@ Rectangle {
 
         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: card.app.soft ? "transparent" : card.app.line }
 
-        // Fixed height so every strip's fader lines up, with or without voice tools.
+        // Room for the flip button (pinned below, same spot on both faces).
         Item {
             Layout.fillWidth: true
-            Layout.preferredHeight: 170
-
-            // One button to the back of the strip (voice tools, or the programs using it), with a dot when
-            // something is on / playing.
-            ColumnLayout {
-                anchors.bottom: parent.bottom
-                width: parent.width
-                height: card.flipBelow
-                spacing: 8
-                Text {
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
-                    text: card.strip.virtual_input ? (card.isApps ? "Programs on the system output · EQ" : "Programs you sent here · EQ") : "Gate · Bass · Brightness · Pitch · EQ"
-                    color: card.app.dim
-                    font.pixelSize: 11
-                }
-                Text {
-                    // Apps carries everything, voice chat included, so warn before it goes to a mic.
-                    visible: card.strip.virtual_input && card.isApps && card.sendsToMic
-                    Layout.fillWidth: true
-                    Layout.topMargin: 6
-                    horizontalAlignment: Text.AlignHCenter
-                    text: "Voice chat playing here also goes into the mic, so people may hear themselves."
-                    color: card.app.warning
-                    font.pixelSize: 11
-                    wrapMode: Text.WordWrap
-                }
-            }
+            Layout.preferredHeight: 36
         }
     }
 
@@ -422,13 +409,6 @@ Rectangle {
         DynamicsPanel { visible: card.tab === 2; card: card; Layout.fillWidth: true }
         FxPanel { visible: card.tab === 3; card: card; Layout.fillWidth: true }
         Item { Layout.fillHeight: true }
-        Text {
-            Layout.fillWidth: true
-            text: "Double-click a slider to reset it."
-            wrapMode: Text.WordWrap
-            color: card.app.dim
-            font.pixelSize: 11
-        }
     }
 
     // Back face of Apps / Media: the programs using the strip, each with its own mute.
@@ -490,7 +470,7 @@ Rectangle {
             }
             Text {
                 Layout.fillWidth: true
-                text: "Drag a program onto a program strip to send it there."
+                text: "Drag a program onto a strip to move it."
                 color: card.app.dim
                 font.pixelSize: 11
                 wrapMode: Text.WordWrap
@@ -500,14 +480,6 @@ Rectangle {
         DynamicsPanel { visible: card.tab === 2; card: card; Layout.fillWidth: true }
         FxPanel { visible: card.tab === 3; card: card; Layout.fillWidth: true }
         Item { visible: card.tab !== 0; Layout.fillHeight: true }
-        Text {
-            visible: card.tab !== 0
-            Layout.fillWidth: true
-            text: "Double-click a slider to reset it."
-            wrapMode: Text.WordWrap
-            color: card.app.dim
-            font.pixelSize: 11
-        }
     }
 
     // Drop a program here (dragged from a program list on an Apps or Media back) to send it to this strip.

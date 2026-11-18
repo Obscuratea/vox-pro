@@ -584,6 +584,16 @@ ApplicationWindow {
                             font.pixelSize: 12
                         }
                     }
+                    // Plugins are off after one crashed Vox while loading: say so, with the way back.
+                    Chip {
+                        visible: win.pluginsSafe && win.engineError === ""
+                        app: win
+                        text: "Plugins are off after a crash  ·  switch on"
+                        checked: true
+                        onColor: win.warning
+                        tip: "Vox closed while loading a plugin last time. Remove the plugin you added last, then click here."
+                        onToggled: win.resumePlugins()
+                    }
                     Item { Layout.fillWidth: true }
                     TextButton {
                         app: win

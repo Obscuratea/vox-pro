@@ -3,3 +3,4 @@
 /packaging/pkg
 /packaging/*.pkg.tar.zst
 .qmlls.ini
+/release

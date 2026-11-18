@@ -45,6 +45,10 @@ if pro:
   (https://opus-codec.org/license/) are kept.
 
 flacenc - Apache 2.0 - https://github.com/yotarok/flacenc-rs  (FLAC recordings)
+
+Lilv, Serd, Sord and Sratom - ISC - https://drobilla.net/software/lilv  (finds and loads LV2 plugins)
+  Used as shared libraries from your system (the lilv package), like the LV2 headers (ISC, https://lv2plug.in).
+  The plugins you load in the plugin rack are separate programs under their own licences; {app} ships none.
 """.replace("{app}", app))
 t.append("""
 RUST LIBRARIES

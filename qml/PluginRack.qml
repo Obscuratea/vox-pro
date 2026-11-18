@@ -64,7 +64,7 @@ Rectangle {
     }
 
     // ---- How one control is shown ----
-    function isLog(p) { return p.log && p.max > 0 && p.max > p.min; }
+    function isLog(p) { return p.max > 0 && p.max > p.min && (p.log || (p.min > 0 && p.max / p.min >= 1000)); }
     function low(p) { return p.min > 0 ? p.min : p.max * 1e-5; }
     function shown(p, v) {
         const tidy = x => Math.abs(x) >= 100 ? x.toFixed(0) : Math.abs(x) >= 10 ? x.toFixed(1) : x.toFixed(2);
@@ -414,7 +414,8 @@ Rectangle {
                             columnSpacing: 28
                             rowSpacing: 14
                             Repeater {
-                                model: rack.info ? rack.info.params : []
+                                // Switches that only drive a plugin's own window (LSP's graphs and overlays) are left out.
+                                model: rack.info ? rack.info.params.filter(p => !/visibility|overlay|graph analysis/i.test(p.name)) : []
                                 Item {
                                     id: cell
                                     required property var modelData

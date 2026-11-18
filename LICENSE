@@ -1,2 +1,33 @@
-Vox Pro (pre-release). Copyright (c) Obscuratea. All rights reserved.
-Licence terms will be set before release.
+Vox Pro License
+
+Copyright (c) 2026 Obscuratea. All rights reserved.
+
+Vox Pro is free to download and use, but it is not open source. The source code is
+published so you can read it, build it for yourself, and report problems, nothing more.
+
+You MAY:
+  - Download, build and run Vox Pro, for free, for any purpose, including commercial
+    work (streaming, content creation, a business that uses it for audio routing, and so on).
+  - Read the source code.
+  - Report bugs and make suggestions through the project's Issues page.
+  - Link to the project, write about it, and show screenshots of it.
+
+You may NOT:
+  - Modify the software or its source code, other than the minimum needed to build it on your
+    own machine for your own use.
+  - Redistribute the software or its source code, in whole or in part, in any form (source,
+    binaries, packages, mirrors, or bundled with other software). Point people to the official
+    repository instead.
+  - Publish forks, derivative works, or "inspired by" copies of the code under another name, or
+    use the code, name, logo or artwork in another project.
+  - Sell, rent, license or otherwise charge for the software, or include it in anything that is
+    sold.
+
+Nothing here transfers ownership of the software or grants any right not listed above.
+GitHub's terms let others view and fork public repositories on GitHub itself; that does not
+give anyone the right to use a fork in ways this license forbids.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. THE AUTHOR
+IS NOT LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM ITS USE.
+
+Vox Pro is not affiliated with VB-Audio or Voicemeeter.
