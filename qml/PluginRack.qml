@@ -2,9 +2,9 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Basic
 
-// The plugins of one strip or output, over the whole window: the chain on the left (order, on/off, remove),
+// The plugins of one strip or output, in place of the mixer page: the chain on the left (order, on/off, remove),
 // and on the right either the installed plugins to pick from or the controls of the selected one.
-Rectangle {
+Item {
     id: rack
     required property var app
     /// "bus" or "strip", and which one.
@@ -81,7 +81,7 @@ Rectangle {
         return p.kind === "int" ? Math.round(v).toString() : tidy(v);
     }
 
-    color: app.bg
+    // Inside the app frame, over the mixer page: the top bar, rail and status bar stay.
     MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }   // nothing reaches the mixer underneath
     // Drop a .clap, .vst3 or .lv2 on the window to add it.
     DropArea {
@@ -103,7 +103,7 @@ Rectangle {
             color: Qt.alpha(rack.app.accent, 0.12)
             border.color: rack.app.accent
             border.width: 2
-            radius: rack.app.rCard
+            radius: rack.app.soft ? 14 : 0
             Text { anchors.centerIn: parent; text: "Drop to add the plugin"; color: rack.app.ink; font.pixelSize: 16; font.bold: true }
         }
     }
@@ -113,31 +113,30 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 24
-        spacing: 14
+        anchors.margins: 16
+        spacing: 12
 
         RowLayout {
             Layout.fillWidth: true
             spacing: 10
+            TextButton { app: rack.app; text: "←  Mixer"; onClicked: rack.done() }
+            Tag { app: rack.app; text: rack.app.tagOf(rack.kind, rack.index) }
             Text {
-                text: rack.target ? rack.target.label : ""
-                color: rack.app.accent
-                font.family: rack.app.mono
-                font.pixelSize: 20
-                font.weight: Font.Bold
+                Layout.maximumWidth: 360
+                text: rack.app.nameOf(rack.kind, rack.index)
+                color: rack.app.ink
+                font.pixelSize: 15
+                font.weight: Font.DemiBold
+                elide: Text.ElideRight
             }
-            Text {
-                Layout.fillWidth: true
-                text: rack.app.t("Plugins")
-                color: rack.app.dim
-                font.family: rack.app.mono
-                font.pixelSize: 13
-                font.letterSpacing: rack.app.soft || rack.app.diamond ? 0.3 : 2
-            }
-            TextButton {
+            Text { text: "Plugins"; color: rack.app.dim; font.pixelSize: 13 }
+            Item { Layout.fillWidth: true }
+            Text { text: "FX"; color: rack.app.dim; font.pixelSize: 12; font.weight: Font.DemiBold }
+            Toggle {
                 app: rack.app
-                text: "Done  ⟲"
-                onClicked: rack.done()
+                checked: rack.target ? rack.target.fx_on !== false : false
+                tip: "Bypass the whole chain"
+                onToggled: rack.set(t => t.fx_on = t.fx_on === false)
             }
         }
 
@@ -145,10 +144,10 @@ Rectangle {
         Rectangle {
             visible: rack.app.pluginsSafe
             Layout.fillWidth: true
-            Layout.preferredHeight: 48
-            radius: rack.app.rBox
+            Layout.preferredHeight: 46
+            radius: rack.app.soft ? 12 : 0
             color: Qt.alpha(rack.app.danger, 0.14)
-            border.color: rack.app.danger
+            border.color: Qt.alpha(rack.app.danger, 0.6)
             RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: 14
@@ -156,7 +155,7 @@ Rectangle {
                 spacing: 12
                 Text {
                     Layout.fillWidth: true
-                    text: "Vox closed unexpectedly while loading plugins, so they are switched off. Remove the one you added last, then switch them back on."
+                    text: "Plugins are switched off after a crash. Remove the one added last, then switch them back on."
                     color: rack.app.ink
                     font.pixelSize: 12
                     elide: Text.ElideRight
@@ -165,29 +164,35 @@ Rectangle {
             }
         }
 
-        RowLayout {
+        // Side by side; one above the other in a narrow window.
+        GridLayout {
+            readonly property bool narrow: rack.width < 640
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 14
+            columns: narrow ? 1 : 2
+            columnSpacing: 12
+            rowSpacing: 12
 
             // ---- The chain ----
-            Rectangle {
-                Layout.preferredWidth: 360
-                Layout.fillHeight: true
-                radius: rack.app.rCard
-                color: rack.app.diamond ? "transparent" : rack.app.panelFill
-                border.color: rack.app.diamond ? rack.app.frameDim : rack.app.edge
+            Card {
+                app: rack.app
+                corner: rack.app.soft ? 14 : 0
+                Layout.preferredWidth: Math.max(220, Math.min(300, rack.width * 0.28))
+                Layout.fillWidth: parent.narrow
+                Layout.fillHeight: !parent.narrow
+                Layout.preferredHeight: chain.implicitHeight + 24
 
                 ColumnLayout {
+                    id: chain
                     anchors.fill: parent
-                    anchors.margins: 14
+                    anchors.margins: 12
                     spacing: 8
                     Text {
-                        text: rack.app.t("Chain")
+                        text: "CHAIN"
                         color: rack.app.dim
-                        font.family: rack.app.mono
                         font.pixelSize: 11
-                        font.letterSpacing: 1
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 1.2
                     }
                     Repeater {
                         model: rack.slots.length
@@ -197,10 +202,10 @@ Rectangle {
                             readonly property var slot: rack.slots[index]
                             readonly property bool current: !rack.browsing && rack.selected === index
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 48
-                            radius: rack.app.rBox
-                            color: rack.app.diamond ? "transparent" : rowMouse.containsMouse ? rack.app.hover : rack.app.soft ? rack.app.tonal : "transparent"
-                            border.color: current ? rack.app.accent : rack.app.soft ? rack.app.controlEdge : rack.app.line
+                            Layout.preferredHeight: 42
+                            radius: rack.app.soft ? 10 : 0
+                            color: row.current ? rack.app.card2 : rowMouse.containsMouse ? rack.app.hover : rack.app.well
+                            border.color: row.current ? rack.app.accent : rowMouse.containsMouse ? rack.app.line2 : rack.app.line
                             MouseArea {
                                 id: rowMouse
                                 anchors.fill: parent
@@ -210,35 +215,75 @@ Rectangle {
                             }
                             RowLayout {
                                 anchors.fill: parent
-                                anchors.leftMargin: 12
-                                anchors.rightMargin: 8
-                                spacing: 6
-                                Text {
-                                    text: row.index + 1
-                                    color: rack.app.accent
-                                    font.family: rack.app.mono
-                                    font.pixelSize: 13
-                                    font.weight: Font.Bold
-                                }
+                                anchors.leftMargin: 10
+                                anchors.rightMargin: 4
+                                spacing: 8
+                                Tag { app: rack.app; text: (row.index + 1).toString() }
                                 Text {
                                     Layout.fillWidth: true
                                     text: row.slot.name
                                     color: rack.app.ink
                                     opacity: row.slot.on ? 1 : 0.5
                                     font.pixelSize: 13
-                                    font.weight: Font.DemiBold
+                                    font.weight: Font.Medium
                                     elide: Text.ElideRight
                                 }
-                                Chip {
+                                Toggle {
                                     app: rack.app
-                                    implicitHeight: 26
-                                    text: row.slot.on ? rack.app.t("On") : rack.app.t("Off")
-                                    checked: row.slot.on
+                                    checked: !!row.slot.on
                                     onToggled: rack.set(t => t.plugins[row.index].on = !t.plugins[row.index].on)
                                 }
-                                TextButton { app: rack.app; implicitHeight: 26; implicitWidth: 28; text: "↑"; tip: "Earlier in the chain"; opacity: row.index > 0 ? 1 : 0.3; onClicked: rack.move(row.index, -1) }
-                                TextButton { app: rack.app; implicitHeight: 26; implicitWidth: 28; text: "↓"; tip: "Later in the chain"; opacity: row.index < rack.slots.length - 1 ? 1 : 0.3; onClicked: rack.move(row.index, 1) }
-                                TextButton { app: rack.app; implicitHeight: 26; implicitWidth: 28; text: "✕"; tip: "Remove"; onClicked: rack.remove(row.index) }
+                                Rectangle {
+                                    id: more
+                                    implicitWidth: 24
+                                    implicitHeight: 28
+                                    radius: rack.app.soft ? 6 : 0
+                                    color: moreMouse.containsMouse || slotMenu.opened ? rack.app.hover : "transparent"
+                                    Text { anchors.centerIn: parent; text: "⋮"; color: moreMouse.containsMouse ? rack.app.ink : rack.app.faint; font.pixelSize: 16; font.bold: true }
+                                    MouseArea { id: moreMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: slotMenu.open() }
+                                    Popup {
+                                        id: slotMenu
+                                        y: more.height + 4
+                                        x: more.width - width
+                                        width: 170
+                                        padding: 6
+                                        background: Rectangle { radius: rack.app.soft ? 12 : 0; color: Qt.tint(rack.app.bg, Qt.alpha(rack.app.ink, 0.06)); border.color: rack.app.line2 }
+                                        contentItem: Column {
+                                            spacing: 2
+                                            Repeater {
+                                                model: [
+                                                    { label: "Move up", usable: row.index > 0, act: () => rack.move(row.index, -1) },
+                                                    { label: "Move down", usable: row.index < rack.slots.length - 1, act: () => rack.move(row.index, 1) },
+                                                    { label: "Remove", usable: true, danger: true, act: () => rack.remove(row.index) }
+                                                ]
+                                                Rectangle {
+                                                    id: menuItem
+                                                    required property var modelData
+                                                    width: 158
+                                                    height: 30
+                                                    radius: rack.app.soft ? 8 : 0
+                                                    opacity: modelData.usable ? 1 : 0.35
+                                                    color: itemMouse.containsMouse && modelData.usable ? rack.app.hover : "transparent"
+                                                    Text {
+                                                        anchors.verticalCenter: parent.verticalCenter
+                                                        x: 10
+                                                        text: menuItem.modelData.label
+                                                        color: menuItem.modelData.danger ? rack.app.danger : rack.app.ink
+                                                        font.pixelSize: 12
+                                                    }
+                                                    MouseArea {
+                                                        id: itemMouse
+                                                        anchors.fill: parent
+                                                        hoverEnabled: true
+                                                        enabled: menuItem.modelData.usable
+                                                        cursorShape: Qt.PointingHandCursor
+                                                        onClicked: { slotMenu.close(); menuItem.modelData.act(); }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -246,27 +291,19 @@ Rectangle {
                         Layout.fillWidth: true
                         visible: rack.slots.length < rack.maxSlots
                         app: rack.app
-                        text: rack.app.diamond ? "+ add plugin" : "+  Add plugin"
+                        text: "+  Add plugin"
                         onClicked: rack.browsing = true
                     }
                     Item { Layout.fillHeight: true }
-                    Text {
-                        Layout.fillWidth: true
-                        text: rack.kind === "bus" ? "Runs top to bottom on the mix, before this output's EQ." : "Runs top to bottom, after this strip's EQ and compressor."
-                        color: rack.app.dim
-                        font.pixelSize: 11
-                        wrapMode: Text.WordWrap
-                    }
                 }
             }
 
             // ---- The installed plugins, or the selected plugin's controls ----
-            Rectangle {
+            Card {
+                app: rack.app
+                corner: rack.app.soft ? 14 : 0
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                radius: rack.app.rCard
-                color: rack.app.diamond ? "transparent" : rack.app.panelFill
-                border.color: rack.app.diamond ? rack.app.frameDim : rack.app.edge
                 clip: true
 
                 // Browser
@@ -290,9 +327,9 @@ Rectangle {
                             selectByMouse: true
                             onTextChanged: rack.search = text
                             background: Rectangle {
-                                radius: rack.app.soft ? height / 2 : 0
-                                color: rack.app.soft ? rack.app.tonal : "transparent"
-                                border.color: searchBox.activeFocus ? rack.app.accent : rack.app.soft ? rack.app.controlEdge : rack.app.line
+                                radius: rack.app.soft ? 10 : 0
+                                color: rack.app.well
+                                border.color: searchBox.activeFocus ? rack.app.accent : rack.app.line
                             }
                         }
                         TextButton {
@@ -365,7 +402,7 @@ Rectangle {
                             required property var modelData
                             width: list.width - 10
                             height: 40
-                            radius: rack.app.rChip
+                            radius: rack.app.soft ? 8 : 0
                             color: entryMouse.containsMouse ? rack.app.hover : "transparent"
                             border.color: entryMouse.containsMouse ? rack.app.accent : "transparent"
                             RowLayout {
@@ -485,10 +522,8 @@ Rectangle {
                                             font.pixelSize: 11
                                             elide: Text.ElideRight
                                         }
-                                        Chip {
+                                        Toggle {
                                             app: rack.app
-                                            implicitHeight: 26
-                                            text: checked ? rack.app.t("On") : rack.app.t("Off")
                                             checked: cell.value > (cell.p.min + cell.p.max) / 2
                                             onToggled: rack.setParam(cell.p.symbol, checked ? cell.p.min : cell.p.max)
                                         }
@@ -524,11 +559,7 @@ Rectangle {
                                                 width: 220
                                                 height: Math.min(implicitHeight, 320)
                                                 padding: 6
-                                                background: Rectangle {
-                                                    radius: rack.app.rBox
-                                                    color: rack.app.outlined ? rack.app.bg : Qt.tint(rack.app.bg, Qt.alpha(rack.app.ink, 0.08))
-                                                    border.color: rack.app.soft && !rack.app.outlined ? Qt.alpha(rack.app.ink, 0.12) : rack.app.line
-                                                }
+                                                background: Rectangle { radius: rack.app.soft ? 12 : 0; color: Qt.tint(rack.app.bg, Qt.alpha(rack.app.ink, 0.06)); border.color: rack.app.line2 }
                                                 contentItem: ListView {
                                                     implicitHeight: contentHeight
                                                     clip: true
@@ -539,7 +570,7 @@ Rectangle {
                                                         required property var modelData
                                                         width: ListView.view.width
                                                         height: 28
-                                                        radius: rack.app.rChip
+                                                        radius: rack.app.soft ? 8 : 0
                                                         color: optionMouse.containsMouse ? rack.app.hover : "transparent"
                                                         Text {
                                                             anchors.verticalCenter: parent.verticalCenter

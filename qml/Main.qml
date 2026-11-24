@@ -238,7 +238,7 @@ ApplicationWindow {
     property var sel: ({ kind: arg("--sel", "strip:0").split(":")[0], index: parseInt(arg("--sel", "strip:0").split(":")[1]) })
     property bool sheetOpen: arg("--insp", "") === "1"
     readonly property bool inspWanted: dockable ? (arg("--insp", "") !== "" ? arg("--insp", "") === "1" : ui.inspector !== false) : sheetOpen
-    readonly property bool inspShown: view === "mixer" && inspWanted
+    readonly property bool inspShown: view === "mixer" && inspWanted && rackTarget === null
     function selectChannel(kind, index, open) {
         sel = { kind: kind, index: index };
         if (!open) return;
@@ -257,7 +257,7 @@ ApplicationWindow {
     // The strip or output the EQ page is on (Pro has an EQ on every strip too).
     property string eqKind: arg("--eq", "bus:0").split(":")[0]
     property int eqIndex: arg("--eq", "") !== "" ? parseInt(arg("--eq", "bus:0").split(":")[1]) : 0
-    function openEq(kind, index) { eqKind = kind; eqIndex = index; view = "eq"; }
+    function openEq(kind, index) { eqKind = kind; eqIndex = index; view = "eq"; rackTarget = null; }
 
     // Which strips and outputs belong to each group, as indexes into cfg.strips and cfg.buses. They are only
     // replaced when the layout itself changes, so moving a fader doesn't rebuild every strip.
@@ -422,7 +422,7 @@ ApplicationWindow {
     // ---- Plugins (Pro) ----
     // The plugin rack: which output or strip it is open on (null = closed). `--rack strip:0` is a dev aid for screenshots.
     property var rackTarget: arg("--rack", "") !== "" ? { kind: arg("--rack", "").split(":")[0], index: parseInt(arg("--rack", "").split(":")[1]) } : null
-    function openRack(kind, index) { rackTarget = { kind: kind, index: index }; }
+    function openRack(kind, index) { view = "mixer"; rackTarget = { kind: kind, index: index }; }
     // Installed LV2, CLAP and VST3 plugins (see plugins.rs). The list is read once the first scan is done; controls are read per plugin and kept.
     property var pluginList: []
     property bool pluginsScanned: false
@@ -807,7 +807,7 @@ ApplicationWindow {
                 width: 9; height: 9; radius: 5
                 color: pageButton.app.accent
             }
-            MouseArea { id: pageMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: pageButton.app.view = pageButton.page }
+            MouseArea { id: pageMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { pageButton.app.view = pageButton.page; pageButton.app.rackTarget = null; } }
         }
 
         ColumnLayout {
@@ -1102,7 +1102,18 @@ ApplicationWindow {
                     anchors.right: parent.right
                     anchors.rightMargin: stage.docked ? inspector.width : 0
 
-                    MixerView { anchors.fill: parent; visible: win.view === "mixer"; app: win }
+                    MixerView { anchors.fill: parent; visible: win.view === "mixer" && win.rackTarget === null; app: win }
+                    // The plugin rack takes the mixer page's place while it is open.
+                    Loader {
+                        anchors.fill: parent
+                        active: win.view === "mixer" && win.rackTarget !== null
+                        sourceComponent: PluginRack {
+                            app: win
+                            kind: win.rackTarget.kind
+                            index: win.rackTarget.index
+                            onDone: win.rackTarget = null
+                        }
+                    }
                     Loader {
                         anchors.fill: parent
                         active: win.view === "routing"
@@ -1283,18 +1294,6 @@ ApplicationWindow {
                         font.pixelSize: 11
                     }
                 }
-            }
-        }
-    
-        // The plugin rack (Pro) covers the window while it is open.
-        Loader {
-            anchors.fill: parent
-            active: win.rackTarget !== null
-            sourceComponent: PluginRack {
-                app: win
-                kind: win.rackTarget.kind
-                index: win.rackTarget.index
-                onDone: win.rackTarget = null
             }
         }
     }
