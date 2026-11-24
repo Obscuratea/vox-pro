@@ -12,7 +12,7 @@
 use crate::recorder::{Format, Recorder};
 use crate::dsp::{CompParams, SAMPLE_RATE, Voice, db_to_lin};
 use crate::plugins::{self, Chain, Slot, Target};
-use crate::settings::{A_BUSES, BUSES, STRIPS, Settings};
+use crate::settings::{MAX_BUSES, MAX_STRIPS, Settings, slug};
 use pipewire as pw;
 use pw::properties::properties;
 use pw::spa;
@@ -25,23 +25,32 @@ use std::sync::{Arc, Mutex};
 const GROUP: &str = "vox-pro";
 const OWN_PREFIX: &str = "vox_pro";
 
-/// Programs can play into these sinks (one per virtual strip), and record from the B microphones.
-const SINKS: [&str; 5] = ["apps", "media", "game", "chat", "browser"];
-const MICS: [&str; 3] = ["b1", "b2", "b3"];
+/// The node.name of the device a virtual strip records or a B bus plays into: "vox_pro_apps", "vox_pro_b1".
+pub fn device_name(label: &str) -> String {
+    format!("{OWN_PREFIX}_{}", slug(label))
+}
 
-/// The devices other programs see: (node.name, description, media.class).
-fn virtual_devices() -> Vec<(String, String, &'static str)> {
-    let title = |l: &str| {
-        let mut c = l.chars();
-        c.next().map(|f| f.to_uppercase().collect::<String>() + c.as_str()).unwrap_or_default()
-    };
-    SINKS
+/// The devices other programs see, one per virtual strip (a sink to play into) and one per B bus (a
+/// microphone): (node.name, description, media.class).
+fn wanted_devices(settings: &Settings) -> Vec<(String, String, &'static str)> {
+    let sinks = settings
+        .strips
         .iter()
-        .map(|l| (format!("{OWN_PREFIX}_{l}"), format!("Vox Pro {}", title(l)), "Audio/Sink"))
-        .chain(MICS.iter().map(|l| {
-            (format!("{OWN_PREFIX}_{l}"), format!("Vox Pro {} (Mic)", l.to_uppercase()), "Audio/Source/Virtual")
-        }))
-        .collect()
+        .filter(|s| s.virtual_input)
+        .map(|s| (device_name(&s.label), format!("Vox Pro {}", s.label), "Audio/Sink"));
+    let mics = settings
+        .buses
+        .iter()
+        .filter(|b| b.virtual_output)
+        .map(|b| (device_name(&b.label), format!("Vox Pro {} (Mic)", b.label), "Audio/Source/Virtual"));
+    sinks.chain(mics).collect()
+}
+
+/// Whether one of our own node names is a device (Apps, B1...) rather than one of our streams (in1, out_a1).
+fn is_device(own_name: &str) -> bool {
+    let Some(rest) = own_name.strip_prefix(OWN_PREFIX).and_then(|r| r.strip_prefix('_')) else { return false };
+    let stream = rest.starts_with("out_") || rest.strip_prefix("in").is_some_and(|n| !n.is_empty() && n.bytes().all(|c| c.is_ascii_digit()));
+    !stream
 }
 const RING: usize = 16_384;
 const STRIDE: usize = 2 * std::mem::size_of::<f32>();
@@ -65,11 +74,11 @@ pub struct Devices {
 
 /// State the UI thread reads.
 pub struct Shared {
-    pub strip_peaks: [[AtomicU32; 2]; STRIPS],
-    pub bus_peaks: [[AtomicU32; 2]; BUSES],
+    pub strip_peaks: [[AtomicU32; 2]; MAX_STRIPS],
+    pub bus_peaks: [[AtomicU32; 2]; MAX_BUSES],
     /// Deepest compressor / limiter gain reduction (dB, positive) since the UI last asked.
-    pub strip_reduction: [AtomicU32; STRIPS],
-    pub bus_reduction: [AtomicU32; BUSES],
+    pub strip_reduction: [AtomicU32; MAX_STRIPS],
+    pub bus_reduction: [AtomicU32; MAX_BUSES],
     pub devices: Mutex<Devices>,
     /// node.name -> global id of the nodes we created, so they can be made system defaults.
     pub own_nodes: Mutex<HashMap<String, u32>>,
@@ -83,6 +92,8 @@ pub struct Shared {
     pub events: Mutex<Vec<String>>,
     /// Per output: the file being recorded to, "!reason" if it couldn't start, "" when not recording.
     pub recording: Mutex<Vec<String>>,
+    /// Frames in the last cycle an output was asked for (PipeWire's quantum), for the latency in the status bar.
+    pub cycle: AtomicU32,
 }
 
 impl Shared {
@@ -98,7 +109,8 @@ impl Shared {
             status: Mutex::default(),
             ptt_held: AtomicBool::new(false),
             events: Mutex::default(),
-            recording: Mutex::new(vec![String::new(); BUSES]),
+            recording: Mutex::new(vec![String::new(); Settings::default().buses.len()]),
+            cycle: AtomicU32::new(0),
         }
     }
 }
@@ -117,7 +129,7 @@ pub enum Command {
     Apply(Settings),
     /// Mute or unmute one program's stream (by PipeWire node id).
     MuteStream(u32, bool),
-    /// Send one program's playback to "apps" or "media" (by PipeWire node id).
+    /// Send one program's playback to a virtual strip, by PipeWire node id and the strip's slug ("apps", "game").
     MoveStream(u32, String),
     /// Start or stop recording one output (by bus index) to a file.
     Record(usize, bool),
@@ -222,17 +234,51 @@ impl PluginSeat {
 
 struct BusState {
     /// How far this bus has read into each strip's ring.
-    cursors: [u64; STRIPS],
+    cursors: [u64; MAX_STRIPS],
     /// Push-to-talk gate per strip (1 open, 0 shut), eased over each cycle so the key doesn't click.
-    ptt_gate: [f32; STRIPS],
+    ptt_gate: [f32; MAX_STRIPS],
     /// The output's parametric EQ, after the mix and before the fader and limiter.
     eq: crate::peq::Peq,
     /// The limiter's current gain (1 = not limiting).
     limit: f32,
     /// Ducking gain per strip (1 = not ducked), eased per sample: down fast, back up slowly.
-    duck_gain: [f32; STRIPS],
+    duck_gain: [f32; MAX_STRIPS],
     gain: f32,
     plugins: PluginSeat,
+}
+
+impl StripState {
+    fn fresh() -> Self {
+        Self {
+            voice: Voice::default(),
+            duck_hold: 0,
+            ring: Ring { frames: vec![[0.0; 2]; RING], write: 0 },
+            dry_ring: Ring { frames: vec![[0.0; 2]; RING], write: 0 },
+            gain: 0.0,
+            plugins: PluginSeat::default(),
+        }
+    }
+}
+
+impl BusState {
+    fn fresh() -> Self {
+        Self {
+            cursors: [0; MAX_STRIPS],
+            ptt_gate: [1.0; MAX_STRIPS],
+            duck_gain: [1.0; MAX_STRIPS],
+            eq: Default::default(),
+            limit: 1.0,
+            gain: 0.0,
+            plugins: PluginSeat::default(),
+        }
+    }
+
+    /// A new strip took slot `i`: read it from its start.
+    fn forget(&mut self, i: usize) {
+        self.cursors[i] = 0;
+        self.ptt_gate[i] = 1.0;
+        self.duck_gain[i] = 1.0;
+    }
 }
 
 struct Mixer {
@@ -251,7 +297,7 @@ struct Mixer {
 impl Mixer {
     /// Start or stop writing one output to a file, and tell the UI where it went.
     fn set_recording(&mut self, bus: usize, on: bool) {
-        if bus >= BUSES {
+        if bus >= self.buses.len() || bus >= self.settings.buses.len() {
             return;
         }
         let status = if on && self.recorders[bus].is_none() {
@@ -273,28 +319,87 @@ impl Mixer {
     }
 
     fn new(shared: Arc<Shared>) -> Self {
+        let settings = Settings::default();
         Self {
-            settings: Settings::default(),
-            strips: (0..STRIPS)
-                .map(|_| StripState {
-                    voice: Voice::default(),
-                    duck_hold: 0,
-                    ring: Ring { frames: vec![[0.0; 2]; RING], write: 0 },
-                    dry_ring: Ring { frames: vec![[0.0; 2]; RING], write: 0 },
-                    gain: 0.0,
-                    plugins: PluginSeat::default(),
-                })
-                .collect(),
-            buses: (0..BUSES).map(|_| BusState { cursors: [0; STRIPS], ptt_gate: [1.0; STRIPS], duck_gain: [1.0; STRIPS], eq: Default::default(), limit: 1.0, gain: 0.0, plugins: PluginSeat::default() }).collect(),
+            strips: settings.strips.iter().map(|_| StripState::fresh()).collect(),
+            buses: settings.buses.iter().map(|_| BusState::fresh()).collect(),
+            recorders: settings.buses.iter().map(|_| None).collect(),
+            settings,
             scratch: Vec::new(),
             block: Vec::new(),
             dry: Vec::new(),
-            recorders: (0..BUSES).map(|_| None).collect(),
             shared,
         }
     }
 
+    /// Size the per-channel state to new settings. A slot that now holds a different channel (one was added
+    /// or removed before it) starts fresh, so no audio, ducking or plugins carry over from whoever was there.
+    /// Recordings follow their output by label, wherever it now sits.
+    fn fit(&mut self, new: &Settings) {
+        let old = &self.settings;
+        let strip_id = |s: &crate::settings::Strip| (s.virtual_input, s.label.clone());
+        for i in 0..new.strips.len().min(self.strips.len()) {
+            if old.strips.get(i).map(strip_id) != Some(strip_id(&new.strips[i])) {
+                let gone = std::mem::replace(&mut self.strips[i], StripState::fresh());
+                plugins::host().discard(gone.plugins.chain);
+                for bus in self.buses.iter_mut() {
+                    bus.forget(i);
+                }
+            }
+        }
+        for gone in self.strips.drain(new.strips.len().min(MAX_STRIPS).min(self.strips.len())..) {
+            plugins::host().discard(gone.plugins.chain);
+        }
+        while self.strips.len() < new.strips.len().min(MAX_STRIPS) {
+            let i = self.strips.len();
+            self.strips.push(StripState::fresh());
+            self.buses.iter_mut().for_each(|bus| bus.forget(i));
+        }
+        for i in 0..new.buses.len().min(self.buses.len()) {
+            if old.buses.get(i).map(|b| &b.label) != Some(&new.buses[i].label) {
+                let gone = std::mem::replace(&mut self.buses[i], BusState::fresh());
+                plugins::host().discard(gone.plugins.chain);
+            }
+        }
+        for gone in self.buses.drain(new.buses.len().min(MAX_BUSES).min(self.buses.len())..) {
+            plugins::host().discard(gone.plugins.chain);
+        }
+        while self.buses.len() < new.buses.len().min(MAX_BUSES) {
+            self.buses.push(BusState::fresh());
+        }
+        // Recordings move with their output; one whose output is gone is finished.
+        let mut by_label: HashMap<String, (Recorder, String)> = HashMap::new();
+        let status = std::mem::take(&mut *self.shared.recording.lock().unwrap());
+        for (i, rec) in std::mem::take(&mut self.recorders).into_iter().enumerate() {
+            if let (Some(rec), Some(bus)) = (rec, old.buses.get(i)) {
+                by_label.insert(bus.label.clone(), (rec, status.get(i).cloned().unwrap_or_default()));
+            }
+        }
+        let mut recorders = Vec::new();
+        let mut shown = Vec::new();
+        for bus in new.buses.iter().take(self.buses.len()) {
+            match by_label.remove(&bus.label) {
+                Some((rec, path)) => {
+                    recorders.push(Some(rec));
+                    shown.push(path);
+                }
+                None => {
+                    recorders.push(None);
+                    shown.push(String::new());
+                }
+            }
+        }
+        for (rec, _) in by_label.into_values() {
+            rec.finish();
+        }
+        self.recorders = recorders;
+        *self.shared.recording.lock().unwrap() = shown;
+    }
+
     fn capture(&mut self, index: usize, bytes: &[u8]) {
+        if index >= self.strips.len() || index >= self.settings.strips.len() {
+            return;
+        }
         let strip = &self.settings.strips[index];
         let target = if strip.mute { 0.0 } else { db_to_lin(strip.gain_db) };
         let gate = strip.gate_on.then(|| db_to_lin(strip.gate_threshold_db));
@@ -344,10 +449,17 @@ impl Mixer {
 
     fn playback(&mut self, index: usize, out: &mut [u8]) {
         let n = out.len() / STRIDE;
+        if n > 0 {
+            self.shared.cycle.store(n as u32, Ordering::Relaxed);
+        }
+        if index >= self.buses.len() || index >= self.settings.buses.len() {
+            out.fill(0);
+            return;
+        }
         self.scratch.clear();
         self.scratch.resize(n, [0.0; 2]);
         // The A buses are what you listen on: a soloed strip silences the others there (not on the mics).
-        let listening = index < A_BUSES;
+        let listening = !self.settings.buses[index].virtual_output;
         // Push to talk shuts the mic strips (not Apps or Media) out of the B mics until the key is held.
         let ptt_shut = !listening && self.settings.ptt_enabled && !self.shared.ptt_held.load(Ordering::Relaxed);
         let solo_active = listening && self.settings.strips.iter().any(|s| s.solo);
@@ -362,14 +474,18 @@ impl Mixer {
         let attack = 1.0 - (-1.0 / (0.02 * SAMPLE_RATE)).exp();
         let recover = 1.0 - (-1.0 / (0.4 * SAMPLE_RATE)).exp();
         for (s, strip) in self.strips.iter().enumerate() {
-            let config = &self.settings.strips[s];
-            if !config.routes[index] || (solo_active && !config.solo) {
+            let Some(config) = self.settings.strips.get(s) else { continue };
+            if !config.routes.get(index).copied().unwrap_or(false) || (solo_active && !config.solo) {
                 continue;
             }
             let ring = if listening && config.a_hears_dry { &strip.dry_ring } else { &strip.ring };
             let bus_state = &mut self.buses[index];
             let cursor = &mut bus_state.cursors[s];
             let write = strip.ring.write;
+            // A strip that started over (it was just added) is behind where this bus last read.
+            if *cursor > write {
+                *cursor = write.saturating_sub(n as u64);
+            }
             // Fallen too far behind (route just turned on, or clocks drifted): skip to near live.
             if write - *cursor > (3 * n).min(RING - n) as u64 {
                 *cursor = write.saturating_sub(n as u64);
@@ -429,7 +545,7 @@ impl Mixer {
             bytes[0..4].copy_from_slice(&l.to_le_bytes());
             bytes[4..8].copy_from_slice(&r.to_le_bytes());
         }
-        if let Some(rec) = &self.recorders[index] {
+        if let Some(Some(rec)) = self.recorders.get(index) {
             self.scratch.clear();
             self.scratch.extend(out.chunks_exact(STRIDE).map(|b| [read_f32(&b[0..4]), read_f32(&b[4..8])]));
             rec.push(&self.scratch);
@@ -501,14 +617,14 @@ fn stream_props(role: Role, settings: &Settings) -> Option<pw::properties::Prope
             if strip.virtual_input {
                 // Record what programs play into the virtual device named after the strip.
                 props.insert("stream.capture.sink", "true");
-                format!("{OWN_PREFIX}_{}", strip.label.to_lowercase())
+                device_name(&strip.label)
             } else {
                 strip.source.clone()
             }
         }
         Role::Bus(i) => {
             let bus = &settings.buses[i];
-            let label = bus.label.to_lowercase();
+            let label = slug(&bus.label);
             props.insert("media.category", "Playback");
             props.insert("node.name", format!("{OWN_PREFIX}_out_{label}"));
             props.insert("node.description", format!("Vox Pro {}", bus.label));
@@ -600,7 +716,7 @@ fn want(role: Role, settings: &Settings) -> Want {
         Role::Strip(i) => {
             let strip = &settings.strips[i];
             if strip.virtual_input {
-                Want::Device(format!("{OWN_PREFIX}_{}", strip.label.to_lowercase()))
+                Want::Device(device_name(&strip.label))
             } else {
                 named(&strip.source)
             }
@@ -646,28 +762,70 @@ fn reconcile(
     changed: &dyn Fn(Role) -> bool,
 ) {
     let settings = mixer.borrow().settings.clone();
-    for i in 0..STRIPS {
+    // Channels that were removed take their streams with them; new ones get an empty slot.
+    streams.strips.resize_with(settings.strips.len().min(MAX_STRIPS), || None);
+    streams.buses.resize_with(settings.buses.len().min(MAX_BUSES), || None);
+    for i in 0..streams.strips.len() {
         let role = Role::Strip(i);
         sync_slot(core, mixer, &mut streams.strips[i], role, &settings, present, changed(role));
     }
-    for i in 0..BUSES {
+    for i in 0..streams.buses.len() {
         let role = Role::Bus(i);
         sync_slot(core, mixer, &mut streams.buses[i], role, &settings, present, changed(role));
     }
 }
 
-/// Take new settings; reopen only the streams whose device changed.
+/// The virtual devices we made, by node.name. Dropping one takes the device away.
+type OwnDevices = Rc<RefCell<HashMap<String, pw::node::Node>>>;
+
+/// Make the devices the settings want and remove the ones they no longer do. They are made on the server (like
+/// EasyEffects does) and go away when we disconnect. They get no link group, so WirePlumber is free to connect
+/// our streams to them.
+fn sync_devices(core: &pw::core::CoreRc, devices: &OwnDevices, settings: &Settings) {
+    let wanted = wanted_devices(settings);
+    let mut devices = devices.borrow_mut();
+    devices.retain(|name, _| wanted.iter().any(|(n, _, _)| n == name));
+    for (name, description, class) in wanted {
+        if devices.contains_key(&name) {
+            continue;
+        }
+        let node = core.create_object::<pw::node::Node>(
+            "adapter",
+            &properties! {
+                "factory.name" => "support.null-audio-sink",
+                "node.name" => name.as_str(),
+                "node.description" => description.as_str(),
+                "media.class" => class,
+                "audio.position" => "FL,FR",
+                // So the system volume (on the Apps device) also turns the Apps strip down.
+                "monitor.channel-volumes" => "true",
+            },
+        );
+        match node {
+            Ok(node) => {
+                devices.insert(name, node);
+            }
+            Err(e) => eprintln!("vox-pro: could not make {name}: {e}"),
+        }
+    }
+}
+
+/// Take new settings; reopen only the streams whose device changed or whose slot now holds another channel.
+#[allow(clippy::too_many_arguments)]
 fn apply(
     core: &pw::core::CoreRc,
     mixer: &Rc<RefCell<Mixer>>,
     streams: &mut Streams,
+    devices: &OwnDevices,
     present: &dyn Fn(&str) -> bool,
     new: Settings,
     first: bool,
     sender: &pw::channel::Sender<Command>,
 ) {
+    sync_devices(core, devices, &new);
     let old = {
         let mut m = mixer.borrow_mut();
+        m.fit(&new);
         for (i, (state, strip)) in m.strips.iter_mut().zip(&new.strips).enumerate() {
             state.plugins.follow(Target::Strip(i), &strip.plugins, sender);
         }
@@ -693,8 +851,9 @@ fn apply(
     let changed = |role: Role| {
         first
             || match role {
-                Role::Strip(i) => old.strips[i].source != new.strips[i].source,
-                Role::Bus(i) => old.buses[i].device != new.buses[i].device,
+                Role::Strip(i) => old.strips.get(i).map(|s| (s.virtual_input, &s.label, &s.source))
+                    != new.strips.get(i).map(|s| (s.virtual_input, &s.label, &s.source)),
+                Role::Bus(i) => old.buses.get(i).map(|b| (&b.label, &b.device)) != new.buses.get(i).map(|b| (&b.label, &b.device)),
             }
     };
     reconcile(core, mixer, streams, present, &changed);
@@ -754,8 +913,12 @@ fn set_mute(stream: &AppStream, muted: bool) {
 /// Work out which of our devices each program is wired to, and hand the list to the UI.
 fn publish_streams(apps: &AppStreams, routes: &Routes, shared: &Shared) {
     let own = shared.own_nodes.lock().unwrap().clone();
-    let id_of = |label: &str| own.get(&format!("{OWN_PREFIX}_{label}")).copied();
-    let targets: Vec<(&str, Option<u32>)> = SINKS.iter().chain(MICS.iter()).map(|&l| (l, id_of(l))).collect();
+    // Our devices by the slug the UI knows them by ("apps", "b1").
+    let targets: Vec<(&str, Option<u32>)> = own
+        .iter()
+        .filter(|(name, _)| is_device(name))
+        .map(|(name, &id)| (&name[OWN_PREFIX.len() + 1..], Some(id)))
+        .collect();
     let routes = routes.borrow();
     let mut list = Vec::new();
     for (&id, stream) in apps.borrow().iter() {
@@ -798,12 +961,11 @@ fn link_virtual_mics(
     links: &mut HashMap<(u32, u32), pw::link::Link>,
 ) {
     let own = shared.own_nodes.lock().unwrap();
-    for label in MICS {
-        let (Some(&from), Some(&to)) =
-            (own.get(&format!("{OWN_PREFIX}_out_{label}")), own.get(&format!("{OWN_PREFIX}_{label}")))
-        else {
-            continue;
-        };
+    // A bus stream "out_b1" goes into the device "b1"; A buses have no device of ours, so they are skipped.
+    let prefix = format!("{OWN_PREFIX}_out_");
+    for (name, &from) in own.iter() {
+        let Some(label) = name.strip_prefix(&prefix) else { continue };
+        let Some(&to) = own.get(&format!("{OWN_PREFIX}_{label}")) else { continue };
         for (&out_port, out) in ports.iter().filter(|(_, p)| p.node == from && p.output) {
             let Some((&in_port, _)) = ports.iter().find(|(_, p)| p.node == to && !p.output && p.channel == out.channel)
             else {
@@ -868,10 +1030,8 @@ fn run(
     let registry = core.get_registry_rc()?;
 
     let mixer = Rc::new(RefCell::new(Mixer::new(shared.clone())));
-    let streams = Rc::new(RefCell::new(Streams {
-        strips: (0..STRIPS).map(|_| None).collect(),
-        buses: (0..BUSES).map(|_| None).collect(),
-    }));
+    let streams = Rc::new(RefCell::new(Streams::default()));
+    let devices: OwnDevices = Rc::default();
     // Streams are only opened once the registry has listed what exists (see the sync below), and
     // after that whenever a device a slot wants appears or goes away.
     let ready = Rc::new(Cell::new(false));
@@ -1066,25 +1226,8 @@ fn run(
         })
         .register();
 
-    // Created on the server (like EasyEffects does), and removed when we disconnect. They get no
-    // link group, so WirePlumber is free to connect our streams to them.
-    let _virtual_devices = virtual_devices()
-        .iter()
-        .map(|(name, description, class)| {
-            core.create_object::<pw::node::Node>(
-                "adapter",
-                &properties! {
-                    "factory.name" => "support.null-audio-sink",
-                    "node.name" => name.as_str(),
-                    "node.description" => description.as_str(),
-                    "media.class" => *class,
-                    "audio.position" => "FL,FR",
-                    // So the system volume (on the Apps device) also turns the Apps strip down.
-                    "monitor.channel-volumes" => "true",
-                },
-            )
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    // The devices exist before the first listing, so the streams that record them can open straight away.
+    sync_devices(&core, &devices, &settings);
 
     // Wait for the registry's first listing (and our own devices) before opening any stream, so a
     // stream is only made for a device that exists. Then open everything with the saved settings.
@@ -1093,8 +1236,8 @@ fn run(
     let _core_listener = core
         .add_listener_local()
         .done({
-            let (core, mixer, streams, ready, present, first) =
-                (core.clone(), mixer.clone(), streams.clone(), ready.clone(), present.clone(), first_settings.clone());
+            let (core, mixer, streams, devices, ready, present, first) =
+                (core.clone(), mixer.clone(), streams.clone(), devices.clone(), ready.clone(), present.clone(), first_settings.clone());
             let sender = sender.clone();
             move |id, seq| {
                 if id != 0 || seq != barrier || ready.get() {
@@ -1102,7 +1245,7 @@ fn run(
                 }
                 ready.set(true);
                 if let Some(settings) = first.borrow_mut().take() {
-                    apply(&core, &mixer, &mut streams.borrow_mut(), &*present, settings, true, &sender);
+                    apply(&core, &mixer, &mut streams.borrow_mut(), &devices, &*present, settings, true, &sender);
                 }
             }
         })
@@ -1129,7 +1272,7 @@ fn run(
         move |command| match command {
             Command::Apply(settings) => {
                 if ready.get() {
-                    apply(&core, &mixer, &mut streams.borrow_mut(), &*present, settings, false, &sender);
+                    apply(&core, &mixer, &mut streams.borrow_mut(), &devices, &*present, settings, false, &sender);
                 } else {
                     // Still waiting for the first listing: the newest settings are the ones to start with.
                     *first.borrow_mut() = Some(settings);
@@ -1139,19 +1282,24 @@ fn run(
             Command::Chain(target, chain) => {
                 let mut m = mixer.borrow_mut();
                 let m = &mut *m;
-                match target {
-                    Target::Strip(i) => m.strips[i].plugins.install(chain, &m.settings.strips[i].plugins),
-                    Target::Bus(i) => m.buses[i].plugins.install(chain, &m.settings.buses[i].plugins),
+                // A chain built for a channel that has since been removed is thrown away.
+                let seat = match target {
+                    Target::Strip(i) => m.strips.get_mut(i).zip(m.settings.strips.get(i)).map(|(st, c)| (&mut st.plugins, &c.plugins)),
+                    Target::Bus(i) => m.buses.get_mut(i).zip(m.settings.buses.get(i)).map(|(st, c)| (&mut st.plugins, &c.plugins)),
+                };
+                match seat {
+                    Some((seat, slots)) => seat.install(chain, slots),
+                    None => plugins::host().discard(chain),
                 }
             }
             Command::ReloadPlugins => {
                 let mut m = mixer.borrow_mut();
                 let m = &mut *m;
-                for (i, state) in m.strips.iter_mut().enumerate() {
-                    state.plugins.follow(Target::Strip(i), &m.settings.strips[i].plugins, &sender);
+                for (i, (state, strip)) in m.strips.iter_mut().zip(&m.settings.strips).enumerate() {
+                    state.plugins.follow(Target::Strip(i), &strip.plugins, &sender);
                 }
-                for (i, state) in m.buses.iter_mut().enumerate() {
-                    state.plugins.follow(Target::Bus(i), &m.settings.buses[i].plugins, &sender);
+                for (i, (state, bus)) in m.buses.iter_mut().zip(&m.settings.buses).enumerate() {
+                    state.plugins.follow(Target::Bus(i), &bus.plugins, &sender);
                 }
             }
             Command::MuteStream(id, muted) => {
@@ -1160,8 +1308,10 @@ fn run(
                 }
             }
             Command::MoveStream(id, target) => {
-                let Some(label) = SINKS.iter().find(|l| **l == target) else { return };
-                let device = format!("{OWN_PREFIX}_{label}");
+                let device = format!("{OWN_PREFIX}_{target}");
+                if !is_device(&device) || !devices.borrow().contains_key(&device) {
+                    return;
+                }
                 let device = device.as_str();
                 // WirePlumber moves the stream when its target.object changes (what Plasma's volume menu does too).
                 if let Some(stream) = apps.borrow().get(&id) {
@@ -1231,7 +1381,7 @@ mod tests {
     fn a_bus_can_hear_the_voice_without_the_pitch_delay() {
         let mut mixer = Mixer::new(Arc::new(Shared::new()));
         mixer.settings = Settings::default();
-        mixer.settings.strips[0].routes = [true, false, false, false, false, true, false, false];
+        mixer.settings.strips[0].routes = vec![true, false, false, false, false, true, false, false];
         mixer.settings.strips[0].a_hears_dry = true;
         mixer.strips[0].voice.configure(0.0, 0.0, 3.5);
         let (mut a_first, mut b_first) = (0.0f32, 0.0f32);
@@ -1254,7 +1404,7 @@ mod tests {
         let mut mixer = Mixer::new(Arc::new(Shared::new()));
         mixer.settings = Settings::default();
         for s in 0..2 {
-            mixer.settings.strips[s].routes = [true, false, false, false, false, true, false, false];
+            mixer.settings.strips[s].routes = vec![true, false, false, false, false, true, false, false];
         }
         mixer.settings.strips[1].solo = true;
         for cycle in 0..3 {
@@ -1276,7 +1426,7 @@ mod tests {
         let mut mixer = Mixer::new(shared.clone());
         mixer.settings = Settings::default();
         mixer.settings.ptt_enabled = true;
-        mixer.settings.strips[0].routes = [true, false, false, false, false, true, false, false];
+        mixer.settings.strips[0].routes = vec![true, false, false, false, false, true, false, false];
         let play = |mixer: &mut Mixer, cycle: usize| {
             mixer.capture(0, &tone_cycle(cycle));
             let (mut a, mut b) = (vec![0u8; 256 * STRIDE], vec![0u8; 256 * STRIDE]);
@@ -1303,10 +1453,10 @@ mod tests {
         let mut mixer = Mixer::new(Arc::new(Shared::new()));
         mixer.settings = Settings::default();
         mixer.settings.strips[0].duck_on = true; // -10 dB when louder than -40 dB
-        mixer.settings.strips[0].routes = [false; BUSES]; // the mic only triggers, so the levels below are Apps alone
-        mixer.settings.strips[3].routes = [true, false, false, false, false, true, false, false]; // Apps to A1 and B1
+        mixer.settings.strips[0].routes = vec![false; 8]; // the mic only triggers, so the levels below are Apps alone
+        mixer.settings.strips[3].routes = vec![true, false, false, false, false, true, false, false]; // Apps to A1 and B1
         let silence = vec![0u8; 256 * STRIDE];
-        let mut run = |mixer: &mut Mixer, cycle: usize, talking: bool| {
+        let run = |mixer: &mut Mixer, cycle: usize, talking: bool| {
             mixer.capture(0, &if talking { tone_cycle(cycle) } else { silence.clone() });
             mixer.capture(3, &tone_cycle(cycle));
             let (mut a, mut b) = (vec![0u8; 256 * STRIDE], vec![0u8; 256 * STRIDE]);
@@ -1346,7 +1496,7 @@ mod tests {
     fn the_limiter_holds_a_bus_under_its_ceiling() {
         let mut mixer = Mixer::new(Arc::new(Shared::new()));
         mixer.settings = Settings::default();
-        mixer.settings.strips[0].routes = [true, false, false, false, false, false, false, false];
+        mixer.settings.strips[0].routes = vec![true, false, false, false, false, false, false, false];
         mixer.settings.strips[0].gain_db = 12.0;
         let mut last = 0.0;
         for cycle in 0..6 {
@@ -1361,5 +1511,60 @@ mod tests {
             }
         }
         assert!(last <= db_to_lin(-12.0) + 1e-4, "limited peak should stay under -12 dB, got {last}");
+    }
+
+    #[test]
+    fn devices_are_told_apart_from_our_streams() {
+        assert!(is_device("vox_pro_apps") && is_device("vox_pro_b2") && is_device("vox_pro_input_2"));
+        assert!(!is_device("vox_pro_in3") && !is_device("vox_pro_out_b1") && !is_device("other_apps"));
+        assert_eq!(device_name("Browser"), "vox_pro_browser");
+    }
+
+    #[test]
+    fn removing_a_channel_in_the_middle_keeps_the_others_playing() {
+        let mut mixer = Mixer::new(Arc::new(Shared::new()));
+        mixer.settings.strips[4].routes = vec![true, false, false, false, false, false, false, false]; // Media to A1
+        let mut a = vec![0u8; 256 * STRIDE];
+        for cycle in 0..20 {
+            mixer.capture(4, &tone_cycle(cycle));
+            mixer.playback(0, &mut a);
+        }
+        assert!(loudest(&a) > 0.1);
+        // Input 2 goes, so Media moves from slot 4 to slot 3; A2 goes too, so everything after it moves up.
+        let mut next = mixer.settings.clone();
+        next.strips.remove(1);
+        next.buses.remove(1);
+        next.strips.iter_mut().for_each(|s| { s.routes.remove(1); });
+        mixer.fit(&next);
+        mixer.settings = next;
+        assert_eq!((mixer.strips.len(), mixer.buses.len(), mixer.recorders.len()), (7, 7, 7));
+        mixer.playback(7, &mut a); // no slot 7 for buses any more, and nothing may panic
+        for cycle in 20..40 {
+            mixer.capture(3, &tone_cycle(cycle));
+            mixer.playback(0, &mut a);
+        }
+        assert!(loudest(&a) > 0.1, "Media still reaches A1 from its new slot");
+        let mut gone = vec![1u8; 256 * STRIDE];
+        mixer.playback(12, &mut gone);
+        assert!(gone.iter().all(|&b| b == 0));
+        mixer.capture(13, &tone_cycle(0)); // a strip slot that doesn't exist: ignored
+    }
+
+    /// Against a scratch PipeWire (PIPEWIRE_RUNTIME_DIR set to its folder): adding a virtual input makes its
+    /// device, removing a B bus takes its mic away. `cargo test --release -- --ignored devices_follow`
+    #[test]
+    #[ignore]
+    fn devices_follow_the_settings_live() {
+        let handle = start(Settings::default());
+        let own = |name: &str| handle.shared.own_nodes.lock().unwrap().contains_key(name);
+        let wait = |what: &dyn Fn() -> bool| (0..50).any(|_| { std::thread::sleep(std::time::Duration::from_millis(100)); what() });
+        assert!(wait(&|| own("vox_pro_apps") && own("vox_pro_b3")), "the default devices appear");
+        let mut next = Settings::default();
+        next.strips.push(crate::settings::Strip { label: "Music".into(), virtual_input: true, routes: vec![false; 8], ..Default::default() });
+        next.buses.remove(7);
+        let next = Settings::from_json(&next.to_json()).unwrap();
+        handle.sender.lock().unwrap().send(Command::Apply(next)).ok().unwrap();
+        assert!(wait(&|| own("vox_pro_music") && !own("vox_pro_b3")), "Music appears and B3 goes");
+        assert!(own("vox_pro_b1") && own("vox_pro_media"), "the others stay");
     }
 }

@@ -6,10 +6,24 @@ use crate::plugins::{self, Slot};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-pub const STRIPS: usize = 8;
-pub const BUSES: usize = 8;
-/// The first this-many buses are hardware outputs (A1-A5); the rest are virtual mics (B1-B3).
-pub const A_BUSES: usize = 5;
+/// How many of each kind of channel there can be. At least one of each always stays.
+/// (qml/Main.qml has the same numbers in `limits`.)
+pub const MAX_HW: usize = 6;
+pub const MAX_VIRT: usize = 8;
+pub const MAX_A: usize = 6;
+pub const MAX_B: usize = 4;
+/// The most strips and buses there can be, for the fixed-size meter tables.
+pub const MAX_STRIPS: usize = MAX_HW + MAX_VIRT;
+pub const MAX_BUSES: usize = MAX_A + MAX_B;
+
+/// Labels for hardware strips, and for virtual strips (which also name their device), first unused first.
+pub const HW_LABELS: [&str; MAX_HW] = ["Mic", "Input 2", "Input 3", "Input 4", "Input 5", "Input 6"];
+pub const VIRT_LABELS: [&str; MAX_VIRT] = ["Apps", "Media", "Game", "Chat", "Browser", "Music", "Stream", "Aux"];
+
+/// The PipeWire node.name part for a virtual device: "Apps" -> "apps", "B1" -> "b1".
+pub fn slug(label: &str) -> String {
+    label.chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '_' }).collect()
+}
 
 /// One input: a hardware source, or a virtual device programs play into ("Apps" for
 /// everything, "Media" for the programs you pick).
@@ -17,14 +31,16 @@ pub const A_BUSES: usize = 5;
 #[serde(default)]
 pub struct Strip {
     pub label: String,
+    /// The name shown in the window, if the user gave one. The label stays as it is: it names the virtual device.
+    pub name: String,
     /// The app bus is a virtual device we create; it has no source to pick.
     pub virtual_input: bool,
     /// PipeWire node.name of the source, empty for none.
     pub source: String,
     pub gain_db: f32,
     pub mute: bool,
-    /// Which outputs this strip feeds, in bus order: A1-A5, B1-B3.
-    pub routes: [bool; BUSES],
+    /// Which outputs this strip feeds, one per bus in the order of `Settings::buses`.
+    pub routes: Vec<bool>,
     pub gate_on: bool,
     pub gate_threshold_db: f32,
     pub bass_db: f32,
@@ -69,11 +85,12 @@ impl Default for Strip {
     fn default() -> Self {
         Self {
             label: String::new(),
+            name: String::new(),
             virtual_input: false,
             source: String::new(),
             gain_db: 0.0,
             mute: false,
-            routes: [false; BUSES],
+            routes: Vec::new(),
             gate_on: false,
             gate_threshold_db: -45.0,
             bass_db: 0.0,
@@ -107,6 +124,8 @@ impl Default for Strip {
 #[serde(default)]
 pub struct Bus {
     pub label: String,
+    /// The name shown beside the A1/B1 tag, if the user gave one.
+    pub name: String,
     pub virtual_output: bool,
     /// PipeWire node.name of the sink for A buses, empty for none.
     pub device: String,
@@ -127,6 +146,7 @@ impl Default for Bus {
     fn default() -> Self {
         Self {
             label: String::new(),
+            name: String::new(),
             virtual_output: false,
             device: String::new(),
             gain_db: 0.0,
@@ -150,6 +170,32 @@ pub struct Scene {
     pub buses: Vec<Bus>,
 }
 
+/// How the window is laid out: which groups of channels are shown, and whether strips are slimmed down.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Ui {
+    pub show_inputs: bool,
+    pub show_virtual: bool,
+    pub show_outputs: bool,
+    /// Strips show only the fader, meter and mute; the rest is in the inspector.
+    pub compact: bool,
+    /// The inspector panel is open.
+    pub inspector: bool,
+}
+
+impl Default for Ui {
+    fn default() -> Self {
+        Self { show_inputs: true, show_virtual: true, show_outputs: true, compact: false, inspector: true }
+    }
+}
+
+/// The longest name a strip or output can be given.
+pub const NAME_LEN: usize = 18;
+
+fn clean_name(name: &str) -> String {
+    name.trim().chars().filter(|c| !c.is_control()).take(NAME_LEN).collect()
+}
+
 /// The most scenes that can be saved.
 pub const MAX_SCENES: usize = 12;
 
@@ -157,7 +203,7 @@ pub const MAX_SCENES: usize = 12;
 pub struct Settings {
     pub strips: Vec<Strip>,
     pub buses: Vec<Bus>,
-    /// Look of the window: "default" is the Vox look, "system" follows Plasma, anything else is an id from qml/Themes.qml.
+    /// Look of the window: an id from qml/Themes.qml ("night", "glass", "light", "gold"). Older ids are mapped there.
     #[serde(default = "default_theme")]
     pub theme: String,
     /// Use `bg_image` as the window background (frosted boxes, accent colours taken from the picture).
@@ -181,6 +227,8 @@ pub struct Settings {
     /// Closing the window leaves Vox running in the tray.
     #[serde(default)]
     pub close_to_tray: bool,
+    #[serde(default)]
+    pub ui: Ui,
 }
 
 fn yes() -> bool {
@@ -192,13 +240,14 @@ fn default_format() -> String {
 }
 
 fn default_theme() -> String {
-    "pro".into()
+    "gold".into()
 }
 
 impl Default for Settings {
     fn default() -> Self {
+        // Buses: A1-A5, then B1-B3.
         let strip = |label: &str, virtual_input, routes: &[usize]| {
-            let mut r = [false; BUSES];
+            let mut r = vec![false; 8];
             for &i in routes {
                 r[i] = true;
             }
@@ -208,7 +257,7 @@ impl Default for Settings {
         Self {
             strips: vec![
                 // Mics go to the first virtual mic by default, apps go to your headphones.
-                strip("Mic", false, &[A_BUSES]),
+                strip("Mic", false, &[5]),
                 strip("Input 2", false, &[]),
                 strip("Input 3", false, &[]),
                 strip("Apps", true, &[0]),
@@ -230,28 +279,87 @@ impl Default for Settings {
             record_format: default_format(),
             check_updates: true,
             close_to_tray: false,
+            ui: Ui::default(),
         }
     }
 }
 
 impl Settings {
-    /// Saved files from older or hand-edited versions may have the wrong shape; fall back
-    /// to defaults for anything that doesn't match the fixed strip and bus layout.
+    /// Saved files from older or hand-edited versions may have the wrong shape. Keep between one and the
+    /// most of each kind of channel, give every virtual strip and every bus a label of its own (labels name
+    /// devices, so they must be unique), and give every strip one route per bus.
     fn sanitized(self) -> Self {
         let defaults = Self::default();
         let mut s = self;
-        // Saves from before a strip or bus existed are shorter; new ones start from their defaults.
-        // Anything beyond the fixed layout is dropped, but the rest of the save (theme, picture) is kept.
-        s.strips.truncate(STRIPS);
-        s.buses.truncate(BUSES);
-        s.strips.extend(defaults.strips[s.strips.len()..].iter().cloned());
-        s.buses.extend(defaults.buses[s.buses.len()..].iter().cloned());
-        for (strip, d) in s.strips.iter_mut().zip(&defaults.strips) {
-            strip.virtual_input = d.virtual_input;
-            if d.virtual_input {
-                // The label names the virtual device, so it can't change.
-                strip.label = d.label.clone();
+
+        // Strips: at most so many of each kind, and at least one.
+        let (mut hw, mut virt) = (0, 0);
+        s.strips.retain(|strip| {
+            let count = if strip.virtual_input { &mut virt } else { &mut hw };
+            *count += 1;
+            *count <= if strip.virtual_input { MAX_VIRT } else { MAX_HW }
+        });
+        if !s.strips.iter().any(|x| !x.virtual_input) {
+            s.strips.insert(0, defaults.strips[0].clone());
+        }
+        if !s.strips.iter().any(|x| x.virtual_input) {
+            s.strips.push(defaults.strips[3].clone());
+        }
+        let mut used: Vec<String> = Vec::new();
+        for i in 0..s.strips.len() {
+            let strip = &mut s.strips[i];
+            let pool: &[&str] = if strip.virtual_input { &VIRT_LABELS } else { &HW_LABELS };
+            let fine = !strip.label.trim().is_empty() && (!strip.virtual_input || pool.contains(&strip.label.as_str()));
+            if !fine || used.contains(&strip.label) {
+                strip.label = pool.iter().find(|l| !used.iter().any(|u| u == *l)).unwrap_or(&pool[0]).to_string();
             }
+            used.push(strip.label.clone());
+        }
+
+        // Buses: A1.. play on hardware, B1.. are virtual mics; the number in the label stays with the bus.
+        // Each strip's routes line up with the buses, so they are cut and padded together.
+        let width = s.buses.len();
+        for strip in s.strips.iter_mut() {
+            strip.routes.resize(width, false);
+        }
+        let (mut a, mut b) = (0, 0);
+        let keep: Vec<bool> = s
+            .buses
+            .iter()
+            .map(|bus| {
+                let count = if bus.virtual_output { &mut b } else { &mut a };
+                *count += 1;
+                *count <= if bus.virtual_output { MAX_B } else { MAX_A }
+            })
+            .collect();
+        let mut kept = keep.iter();
+        s.buses.retain(|_| *kept.next().unwrap());
+        for strip in s.strips.iter_mut() {
+            let mut kept = keep.iter();
+            strip.routes.retain(|_| *kept.next().unwrap());
+        }
+        if a == 0 {
+            s.buses.insert(0, defaults.buses[0].clone());
+            s.strips.iter_mut().for_each(|x| x.routes.insert(0, false));
+        }
+        if b == 0 {
+            s.buses.push(defaults.buses[5].clone());
+            s.strips.iter_mut().for_each(|x| x.routes.push(false));
+        }
+        let mut used: Vec<String> = Vec::new();
+        for bus in s.buses.iter_mut() {
+            let letter = if bus.virtual_output { 'B' } else { 'A' };
+            let max = if bus.virtual_output { MAX_B } else { MAX_A };
+            let number = bus.label.strip_prefix(letter).and_then(|n| n.parse::<usize>().ok());
+            if !number.is_some_and(|n| (1..=max).contains(&n)) || used.contains(&bus.label) {
+                let free = (1..=max).map(|n| format!("{letter}{n}")).find(|l| !used.contains(l));
+                bus.label = free.unwrap_or_else(|| format!("{letter}1"));
+            }
+            used.push(bus.label.clone());
+        }
+
+        for strip in s.strips.iter_mut() {
+            strip.name = clean_name(&strip.name);
             strip.gain_db = strip.gain_db.clamp(-60.0, 12.0);
             strip.gate_threshold_db = strip.gate_threshold_db.clamp(-80.0, 0.0);
             strip.bass_db = strip.bass_db.clamp(-12.0, 12.0);
@@ -276,9 +384,8 @@ impl Settings {
             strip.comp_release_ms = strip.comp_release_ms.clamp(10.0, 1000.0);
             strip.comp_makeup_db = strip.comp_makeup_db.clamp(0.0, 24.0);
         }
-        for (bus, d) in s.buses.iter_mut().zip(&defaults.buses) {
-            bus.virtual_output = d.virtual_output;
-            bus.label = d.label.clone();
+        for bus in s.buses.iter_mut() {
+            bus.name = clean_name(&bus.name);
             bus.gain_db = bus.gain_db.clamp(-60.0, 12.0);
             bus.limiter_db = bus.limiter_db.clamp(-24.0, 0.0);
             peq::sanitize(&mut bus.eq);
@@ -305,7 +412,7 @@ impl Settings {
     }
 
     pub fn from_json(json: &str) -> Option<Self> {
-        serde_json::from_str::<Self>(json).ok().map(Self::sanitized)
+        serde_json::from_str::<Self>(json).map_err(|e| eprintln!("vox-pro: settings: {e}")).ok().map(Self::sanitized)
     }
 
     pub fn to_json(&self) -> String {
@@ -359,13 +466,53 @@ mod tests {
     use super::*;
 
     #[test]
-    fn older_saves_gain_the_media_strip_and_keep_their_values() {
-        let old = r#"{"strips":[{"label":"Mic","source":"quadcast","gain_db":-6.0},{"label":"Input 2"},{"label":"Apps"}],
-                      "buses":[{"label":"A1"},{"label":"A2"},{"label":"A3"},{"label":"B1"},{"label":"B2"}]}"#;
-        let s = Settings::from_json(old).expect("old save loads");
-        assert_eq!(s.strips.len(), STRIPS);
+    fn saves_from_0_2_keep_their_values_and_their_layout() {
+        // 0.2 saved all eight strips and buses with fixed eight-wide routes.
+        let mut old = Settings::default();
+        old.strips[0].source = "quadcast".into();
+        old.strips[0].gain_db = -6.0;
+        old.buses[6].limiter_on = true;
+        let json = old.to_json().replace(r#""name":"","#, "").replace(r#","ui":{"show_inputs":true,"show_virtual":true,"show_outputs":true,"compact":false,"inspector":true}"#, "");
+        assert!(!json.contains("\"ui\""));
+        let s = Settings::from_json(&json).expect("0.2 save loads");
+        assert_eq!((s.strips.len(), s.buses.len()), (8, 8));
         assert_eq!((s.strips[0].source.as_str(), s.strips[0].gain_db), ("quadcast", -6.0));
-        assert_eq!(s.strips[3], Settings::default().strips[3]);
+        assert_eq!(s.strips[0].routes, old.strips[0].routes);
+        assert_eq!((s.buses[6].label.as_str(), s.buses[6].limiter_on), ("B2", true));
+        assert_eq!(s.ui, Ui::default());
+    }
+
+    #[test]
+    fn at_least_one_of_each_stays_and_labels_are_unique() {
+        let odd = r#"{"strips":[{"label":"Mic","routes":[true,true]},{"label":"Mic"}],"buses":[{"label":"A1"},{"label":"A1"}]}"#;
+        let s = Settings::from_json(odd).expect("loads");
+        assert_eq!(s.strips.iter().map(|x| x.label.as_str()).collect::<Vec<_>>(), ["Mic", "Input 2", "Apps"]);
+        assert_eq!(s.buses.iter().map(|x| x.label.as_str()).collect::<Vec<_>>(), ["A1", "A2", "B1"]);
+        assert_eq!(s.strips[0].routes, vec![true, true, false]);
+        assert!(s.strips.iter().all(|x| x.routes.len() == 3));
+    }
+
+    #[test]
+    fn a_removed_bus_takes_its_routes_with_it_and_numbers_stay() {
+        let s = Settings::from_json(r#"{"strips":[{"label":"Mic","routes":[false,true]},{"label":"Apps","virtual_input":true}],
+            "buses":[{"label":"A1"},{"label":"B2","virtual_output":true}]}"#).expect("loads");
+        assert_eq!(s.buses[1].label, "B2");
+        assert_eq!(s.strips[0].routes, vec![false, true]);
+    }
+
+    #[test]
+    fn too_many_channels_are_cut_to_the_limit() {
+        let strips: Vec<String> = (0..11).map(|_| r#"{"label":"x","virtual_input":true}"#.to_string()).collect();
+        let s = Settings::from_json(&format!(r#"{{"strips":[{}],"buses":[]}}"#, strips.join(","))).expect("loads");
+        assert_eq!(s.strips.iter().filter(|x| x.virtual_input).count(), MAX_VIRT);
+        assert_eq!(s.strips.iter().filter(|x| x.virtual_input).map(|x| x.label.as_str()).collect::<Vec<_>>(), VIRT_LABELS);
+    }
+
+    #[test]
+    fn names_are_trimmed() {
+        let s = Settings::from_json(r#"{"strips":[{"label":"Mic","name":"  A very long name for a microphone  "}],"buses":[{"label":"A1","name":"Headphones"}]}"#).expect("loads");
+        assert_eq!(s.strips[0].name, "A very long name f");
+        assert_eq!((s.buses[0].name.as_str(), s.buses[0].label.as_str()), ("Headphones", "A1"));
     }
 
     #[test]
@@ -382,7 +529,7 @@ mod tests {
     fn a_save_with_the_wrong_bus_count_keeps_its_theme() {
         let odd = r#"{"strips":[],"buses":[{"label":"A1","gain_db":-3.0}],"theme":"pureblack","bg_enabled":true}"#;
         let s = Settings::from_json(odd).expect("odd save loads");
-        assert_eq!((s.theme.as_str(), s.bg_enabled, s.buses.len()), ("pureblack", true, BUSES));
+        assert_eq!((s.theme.as_str(), s.bg_enabled, s.buses.len()), ("pureblack", true, 2));
         assert_eq!(s.buses[0].gain_db, -3.0);
     }
 }
