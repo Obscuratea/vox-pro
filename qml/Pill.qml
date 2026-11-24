@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import QtQuick.Controls.Basic
 
 // The small switches on a strip, as in the mock-up:
@@ -26,6 +27,9 @@ Rectangle {
                                  : send ? app.accentInk : app.ink
 
     implicitWidth: Math.max(footer ? 30 : 28, label.implicitWidth + 14)
+    // In a row of pills the row's width wins: a narrow strip shrinks them (the label elides) instead of letting
+    // them stick out of the strip.
+    Layout.minimumWidth: 0
     implicitHeight: footer ? 30 : 24
     radius: app.soft ? (footer ? 9 : 8) : 0
     readonly property bool lit: checked && kind === "pill"

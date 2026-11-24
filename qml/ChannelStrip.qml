@@ -100,7 +100,9 @@ Card {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.minimumHeight: 80
-            spacing: strip.tight ? 4 : 10
+            // The gap only between fader and meter: row spacing would also go around the two fillers and make a
+            // narrow strip's contents wider than the strip.
+            spacing: 0
             Item { Layout.fillWidth: true }
             Fader {
                 app: strip.app
@@ -108,6 +110,7 @@ Card {
                 value: strip.ch.gain_db || 0
                 onMoved: v => strip.set(s => s.gain_db = v)
             }
+            Item { implicitWidth: strip.tight ? 4 : 10 }
             LevelMeter {
                 app: strip.app
                 Layout.fillHeight: true
