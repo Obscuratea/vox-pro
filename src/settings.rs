@@ -68,6 +68,8 @@ pub struct Strip {
     pub eq_db: Option<[f32; 3]>,
     /// LV2 plugins, run in order after the EQ and compressor (see plugins.rs).
     pub plugins: Vec<Slot>,
+    /// The whole plugin chain is in use (the FX switch on the strip); off bypasses every plugin at once.
+    pub fx_on: bool,
     /// Compressor: evens out loud and quiet parts of the voice.
     pub comp_on: bool,
     pub comp_threshold_db: f32,
@@ -108,6 +110,7 @@ impl Default for Strip {
             eq_hz: None,
             eq_db: None,
             plugins: Vec::new(),
+            fx_on: true,
             comp_on: false,
             comp_threshold_db: -18.0,
             comp_ratio: 3.0,
@@ -140,6 +143,8 @@ pub struct Bus {
     pub eq_gain_db: f32,
     /// LV2 plugins on the mix, before the EQ.
     pub plugins: Vec<Slot>,
+    /// The whole plugin chain is in use (the FX switch); off bypasses every plugin at once.
+    pub fx_on: bool,
 }
 
 impl Default for Bus {
@@ -157,6 +162,7 @@ impl Default for Bus {
             eq: peq::default_cells(),
             eq_gain_db: 0.0,
             plugins: Vec::new(),
+            fx_on: true,
         }
     }
 }

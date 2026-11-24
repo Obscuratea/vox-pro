@@ -128,6 +128,11 @@ pub mod qobject {
         #[cxx_name = "moveStream"]
         fn move_stream(self: &Mixer, id: i32, target: &QString);
 
+        // Glass themes: ask the compositor to blur the desktop behind the see-through window.
+        #[qinvokable]
+        #[cxx_name = "blurBehind"]
+        fn blur_behind(self: &Mixer, on: bool);
+
         // What Vox itself uses: `{cpu, ram, rate, cycle}`, cpu in % of one core since the last call, ram in MiB,
         // the sample rate and one PipeWire cycle in ms.
         #[qinvokable]
@@ -265,6 +270,10 @@ impl qobject::Mixer {
 
     fn mute_stream(&self, id: i32, muted: bool) {
         let _ = state().engine.sender.lock().unwrap().send(Command::MuteStream(id as u32, muted));
+    }
+
+    fn blur_behind(&self, on: bool) {
+        unsafe { crate::vox_blur_behind(on) }
     }
 
     fn usage(&self) -> qobject::QString {

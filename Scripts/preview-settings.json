@@ -1,1131 +1,1170 @@
 {
- "strips": [
-  {
-   "label": "Mic",
-   "virtual_input": false,
-   "source": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "routes": [
-    false,
-    false,
-    false,
-    false,
-    false,
-    true,
-    false,
-    false
-   ],
-   "gate_on": false,
-   "gate_threshold_db": -45.0,
-   "bass_db": 0.0,
-   "brightness_db": 0.0,
-   "pitch_semitones": 0.0,
-   "a_hears_dry": false,
-   "duck_on": false,
-   "duck_threshold_db": -40.0,
-   "duck_db": -10.0,
-   "duck_b": true,
-   "duck_a": false,
-   "eq_on": true,
-   "comp_on": true,
-   "comp_threshold_db": -18,
-   "comp_ratio": 3,
-   "comp_attack_ms": 10,
-   "comp_release_ms": 120,
-   "comp_makeup_db": 0,
-   "eq": [
+  "strips": [
     {
-     "on": true,
-     "kind": "highpass",
-     "hz": 90,
-     "db": 0,
-     "q": 0.71
+      "label": "Mic",
+      "virtual_input": false,
+      "source": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "routes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+      ],
+      "gate_on": false,
+      "gate_threshold_db": -45.0,
+      "bass_db": 0.0,
+      "brightness_db": 0.0,
+      "pitch_semitones": 0.0,
+      "a_hears_dry": false,
+      "duck_on": false,
+      "duck_threshold_db": -40.0,
+      "duck_db": -10.0,
+      "duck_b": true,
+      "duck_a": false,
+      "eq_on": true,
+      "comp_on": true,
+      "comp_threshold_db": -18,
+      "comp_ratio": 3,
+      "comp_attack_ms": 10,
+      "comp_release_ms": 120,
+      "comp_makeup_db": 0,
+      "eq": [
+        {
+          "on": true,
+          "kind": "highpass",
+          "hz": 90,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": -2,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 2.5,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 4,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 2,
+          "q": 0.71
+        }
+      ],
+      "plugins": [
+        {
+          "uri": "http://calf.sourceforge.net/plugins/Deesser",
+          "name": "Calf Deesser",
+          "on": true,
+          "params": {}
+        },
+        {
+          "uri": "http://calf.sourceforge.net/plugins/Reverb",
+          "name": "Calf Reverb",
+          "on": true,
+          "params": {
+            "decay_time": 2.4,
+            "amount": 0.4
+          }
+        }
+      ],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
     },
     {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": -2,
-     "q": 1
+      "label": "Input 2",
+      "virtual_input": false,
+      "source": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "routes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "gate_on": false,
+      "gate_threshold_db": -45.0,
+      "bass_db": 0.0,
+      "brightness_db": 0.0,
+      "pitch_semitones": 0.0,
+      "a_hears_dry": false,
+      "duck_on": false,
+      "duck_threshold_db": -40.0,
+      "duck_db": -10.0,
+      "duck_b": true,
+      "duck_a": false,
+      "eq_on": false,
+      "comp_on": false,
+      "comp_threshold_db": -18,
+      "comp_ratio": 3,
+      "comp_attack_ms": 10,
+      "comp_release_ms": 120,
+      "comp_makeup_db": 0,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 0,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
     },
     {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
+      "label": "Input 3",
+      "virtual_input": false,
+      "source": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "routes": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "gate_on": false,
+      "gate_threshold_db": -45.0,
+      "bass_db": 0.0,
+      "brightness_db": 0.0,
+      "pitch_semitones": 0.0,
+      "a_hears_dry": false,
+      "duck_on": false,
+      "duck_threshold_db": -40.0,
+      "duck_db": -10.0,
+      "duck_b": true,
+      "duck_a": false,
+      "eq_on": false,
+      "comp_on": false,
+      "comp_threshold_db": -18,
+      "comp_ratio": 3,
+      "comp_attack_ms": 10,
+      "comp_release_ms": 120,
+      "comp_makeup_db": 0,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 0,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
     },
     {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 2.5,
-     "q": 1
+      "label": "Apps",
+      "virtual_input": true,
+      "source": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "routes": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "gate_on": false,
+      "gate_threshold_db": -45.0,
+      "bass_db": 0.0,
+      "brightness_db": 0.0,
+      "pitch_semitones": 0.0,
+      "a_hears_dry": false,
+      "duck_on": false,
+      "duck_threshold_db": -40.0,
+      "duck_db": -10.0,
+      "duck_b": true,
+      "duck_a": false,
+      "eq_on": false,
+      "comp_on": false,
+      "comp_threshold_db": -18,
+      "comp_ratio": 3,
+      "comp_attack_ms": 10,
+      "comp_release_ms": 120,
+      "comp_makeup_db": 0,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 0,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
     },
     {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 4,
-     "q": 1
+      "label": "Media",
+      "virtual_input": true,
+      "source": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "routes": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "gate_on": false,
+      "gate_threshold_db": -45.0,
+      "bass_db": 0.0,
+      "brightness_db": 0.0,
+      "pitch_semitones": 0.0,
+      "a_hears_dry": false,
+      "duck_on": false,
+      "duck_threshold_db": -40.0,
+      "duck_db": -10.0,
+      "duck_b": true,
+      "duck_a": false,
+      "eq_on": true,
+      "comp_on": false,
+      "comp_threshold_db": -18,
+      "comp_ratio": 3,
+      "comp_attack_ms": 10,
+      "comp_release_ms": 120,
+      "comp_makeup_db": 0,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": -3,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": -2,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 2.5,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 4,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 2,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
     },
     {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 2,
-     "q": 0.71
+      "label": "Game",
+      "virtual_input": true,
+      "source": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "routes": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "gate_on": false,
+      "gate_threshold_db": -45.0,
+      "bass_db": 0.0,
+      "brightness_db": 0.0,
+      "pitch_semitones": 0.0,
+      "a_hears_dry": false,
+      "duck_on": false,
+      "duck_threshold_db": -40.0,
+      "duck_db": -10.0,
+      "duck_b": true,
+      "duck_a": false,
+      "eq_on": false,
+      "comp_on": true,
+      "comp_threshold_db": -18,
+      "comp_ratio": 4,
+      "comp_attack_ms": 10,
+      "comp_release_ms": 120,
+      "comp_makeup_db": 0,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 0,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
+    },
+    {
+      "label": "Chat",
+      "virtual_input": true,
+      "source": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "routes": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "gate_on": false,
+      "gate_threshold_db": -45.0,
+      "bass_db": 0.0,
+      "brightness_db": 0.0,
+      "pitch_semitones": 0.0,
+      "a_hears_dry": false,
+      "duck_on": false,
+      "duck_threshold_db": -40.0,
+      "duck_db": -10.0,
+      "duck_b": true,
+      "duck_a": false,
+      "eq_on": false,
+      "comp_on": false,
+      "comp_threshold_db": -18,
+      "comp_ratio": 3,
+      "comp_attack_ms": 10,
+      "comp_release_ms": 120,
+      "comp_makeup_db": 0,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 0,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
+    },
+    {
+      "label": "Browser",
+      "virtual_input": true,
+      "source": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "routes": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "gate_on": false,
+      "gate_threshold_db": -45.0,
+      "bass_db": 0.0,
+      "brightness_db": 0.0,
+      "pitch_semitones": 0.0,
+      "a_hears_dry": false,
+      "duck_on": false,
+      "duck_threshold_db": -40.0,
+      "duck_db": -10.0,
+      "duck_b": true,
+      "duck_a": false,
+      "eq_on": false,
+      "comp_on": false,
+      "comp_threshold_db": -18,
+      "comp_ratio": 3,
+      "comp_attack_ms": 10,
+      "comp_release_ms": 120,
+      "comp_makeup_db": 0,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 0,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
     }
-   ],
-   "plugins": [
+  ],
+  "buses": [
     {
-     "uri": "http://calf.sourceforge.net/plugins/Deesser",
-     "name": "Calf Deesser",
-     "on": true,
-     "params": {}
+      "label": "A1",
+      "virtual_output": false,
+      "device": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "limiter_on": true,
+      "limiter_db": -1,
+      "eq_on": true,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 4,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 450,
+          "db": -5,
+          "q": 2.2
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 3,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 5,
+          "q": 0.71
+        }
+      ],
+      "plugins": [
+        {
+          "uri": "http://calf.sourceforge.net/plugins/Reverb",
+          "name": "Calf Reverb",
+          "on": true,
+          "params": {}
+        }
+      ],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
     },
     {
-     "uri": "http://calf.sourceforge.net/plugins/Reverb",
-     "name": "Calf Reverb",
-     "on": true,
-     "params": {
-      "decay_time": 2.4,
-      "amount": 0.4
-     }
+      "label": "A2",
+      "virtual_output": false,
+      "device": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "limiter_on": false,
+      "limiter_db": -1,
+      "eq_on": false,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 0,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
+    },
+    {
+      "label": "A3",
+      "virtual_output": false,
+      "device": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "limiter_on": false,
+      "limiter_db": -1,
+      "eq_on": false,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 0,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
+    },
+    {
+      "label": "A4",
+      "virtual_output": false,
+      "device": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "limiter_on": false,
+      "limiter_db": -1,
+      "eq_on": false,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 0,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
+    },
+    {
+      "label": "A5",
+      "virtual_output": false,
+      "device": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "limiter_on": false,
+      "limiter_db": -1,
+      "eq_on": false,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 0,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
+    },
+    {
+      "label": "B1",
+      "virtual_output": true,
+      "device": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "limiter_on": false,
+      "limiter_db": -1,
+      "eq_on": true,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": -4,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 3,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": -2,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
+    },
+    {
+      "label": "B2",
+      "virtual_output": true,
+      "device": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "limiter_on": false,
+      "limiter_db": -1,
+      "eq_on": false,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 0,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
+    },
+    {
+      "label": "B3",
+      "virtual_output": true,
+      "device": "",
+      "gain_db": 0.0,
+      "mute": false,
+      "limiter_on": false,
+      "limiter_db": -1,
+      "eq_on": false,
+      "eq": [
+        {
+          "on": true,
+          "kind": "lowshelf",
+          "hz": 80,
+          "db": 0,
+          "q": 0.71
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 200,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 600,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 2000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "peak",
+          "hz": 5000,
+          "db": 0,
+          "q": 1
+        },
+        {
+          "on": true,
+          "kind": "highshelf",
+          "hz": 10000,
+          "db": 0,
+          "q": 0.71
+        }
+      ],
+      "plugins": [],
+      "eq_gain_db": 0,
+      "name": "",
+      "fx_on": true
     }
-   ],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "Input 2",
-   "virtual_input": false,
-   "source": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "routes": [
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false
-   ],
-   "gate_on": false,
-   "gate_threshold_db": -45.0,
-   "bass_db": 0.0,
-   "brightness_db": 0.0,
-   "pitch_semitones": 0.0,
-   "a_hears_dry": false,
-   "duck_on": false,
-   "duck_threshold_db": -40.0,
-   "duck_db": -10.0,
-   "duck_b": true,
-   "duck_a": false,
-   "eq_on": false,
-   "comp_on": false,
-   "comp_threshold_db": -18,
-   "comp_ratio": 3,
-   "comp_attack_ms": 10,
-   "comp_release_ms": 120,
-   "comp_makeup_db": 0,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 0,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "Input 3",
-   "virtual_input": false,
-   "source": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "routes": [
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false
-   ],
-   "gate_on": false,
-   "gate_threshold_db": -45.0,
-   "bass_db": 0.0,
-   "brightness_db": 0.0,
-   "pitch_semitones": 0.0,
-   "a_hears_dry": false,
-   "duck_on": false,
-   "duck_threshold_db": -40.0,
-   "duck_db": -10.0,
-   "duck_b": true,
-   "duck_a": false,
-   "eq_on": false,
-   "comp_on": false,
-   "comp_threshold_db": -18,
-   "comp_ratio": 3,
-   "comp_attack_ms": 10,
-   "comp_release_ms": 120,
-   "comp_makeup_db": 0,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 0,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "Apps",
-   "virtual_input": true,
-   "source": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "routes": [
-    true,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false
-   ],
-   "gate_on": false,
-   "gate_threshold_db": -45.0,
-   "bass_db": 0.0,
-   "brightness_db": 0.0,
-   "pitch_semitones": 0.0,
-   "a_hears_dry": false,
-   "duck_on": false,
-   "duck_threshold_db": -40.0,
-   "duck_db": -10.0,
-   "duck_b": true,
-   "duck_a": false,
-   "eq_on": false,
-   "comp_on": false,
-   "comp_threshold_db": -18,
-   "comp_ratio": 3,
-   "comp_attack_ms": 10,
-   "comp_release_ms": 120,
-   "comp_makeup_db": 0,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 0,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "Media",
-   "virtual_input": true,
-   "source": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "routes": [
-    true,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false
-   ],
-   "gate_on": false,
-   "gate_threshold_db": -45.0,
-   "bass_db": 0.0,
-   "brightness_db": 0.0,
-   "pitch_semitones": 0.0,
-   "a_hears_dry": false,
-   "duck_on": false,
-   "duck_threshold_db": -40.0,
-   "duck_db": -10.0,
-   "duck_b": true,
-   "duck_a": false,
-   "eq_on": true,
-   "comp_on": false,
-   "comp_threshold_db": -18,
-   "comp_ratio": 3,
-   "comp_attack_ms": 10,
-   "comp_release_ms": 120,
-   "comp_makeup_db": 0,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": -3,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": -2,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 2.5,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 4,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 2,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "Game",
-   "virtual_input": true,
-   "source": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "routes": [
-    true,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false
-   ],
-   "gate_on": false,
-   "gate_threshold_db": -45.0,
-   "bass_db": 0.0,
-   "brightness_db": 0.0,
-   "pitch_semitones": 0.0,
-   "a_hears_dry": false,
-   "duck_on": false,
-   "duck_threshold_db": -40.0,
-   "duck_db": -10.0,
-   "duck_b": true,
-   "duck_a": false,
-   "eq_on": false,
-   "comp_on": true,
-   "comp_threshold_db": -18,
-   "comp_ratio": 4,
-   "comp_attack_ms": 10,
-   "comp_release_ms": 120,
-   "comp_makeup_db": 0,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 0,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "Chat",
-   "virtual_input": true,
-   "source": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "routes": [
-    true,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false
-   ],
-   "gate_on": false,
-   "gate_threshold_db": -45.0,
-   "bass_db": 0.0,
-   "brightness_db": 0.0,
-   "pitch_semitones": 0.0,
-   "a_hears_dry": false,
-   "duck_on": false,
-   "duck_threshold_db": -40.0,
-   "duck_db": -10.0,
-   "duck_b": true,
-   "duck_a": false,
-   "eq_on": false,
-   "comp_on": false,
-   "comp_threshold_db": -18,
-   "comp_ratio": 3,
-   "comp_attack_ms": 10,
-   "comp_release_ms": 120,
-   "comp_makeup_db": 0,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 0,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "Browser",
-   "virtual_input": true,
-   "source": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "routes": [
-    true,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false
-   ],
-   "gate_on": false,
-   "gate_threshold_db": -45.0,
-   "bass_db": 0.0,
-   "brightness_db": 0.0,
-   "pitch_semitones": 0.0,
-   "a_hears_dry": false,
-   "duck_on": false,
-   "duck_threshold_db": -40.0,
-   "duck_db": -10.0,
-   "duck_b": true,
-   "duck_a": false,
-   "eq_on": false,
-   "comp_on": false,
-   "comp_threshold_db": -18,
-   "comp_ratio": 3,
-   "comp_attack_ms": 10,
-   "comp_release_ms": 120,
-   "comp_makeup_db": 0,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 0,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
+  ],
+  "theme": "gold",
+  "bg_enabled": false,
+  "bg_image": "",
+  "scenes": [],
+  "ptt_enabled": false,
+  "close_to_tray": false,
+  "ui": {
+    "show_inputs": true,
+    "show_virtual": true,
+    "show_outputs": true,
+    "compact": false,
+    "inspector": true
   }
- ],
- "buses": [
-  {
-   "label": "A1",
-   "virtual_output": false,
-   "device": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "limiter_on": true,
-   "limiter_db": -1,
-   "eq_on": true,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 4,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 450,
-     "db": -5,
-     "q": 2.2
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 3,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 5,
-     "q": 0.71
-    }
-   ],
-   "plugins": [
-    {
-     "uri": "http://calf.sourceforge.net/plugins/Reverb",
-     "name": "Calf Reverb",
-     "on": true,
-     "params": {}
-    }
-   ],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "A2",
-   "virtual_output": false,
-   "device": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "limiter_on": false,
-   "limiter_db": -1,
-   "eq_on": false,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 0,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "A3",
-   "virtual_output": false,
-   "device": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "limiter_on": false,
-   "limiter_db": -1,
-   "eq_on": false,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 0,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "A4",
-   "virtual_output": false,
-   "device": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "limiter_on": false,
-   "limiter_db": -1,
-   "eq_on": false,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 0,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "A5",
-   "virtual_output": false,
-   "device": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "limiter_on": false,
-   "limiter_db": -1,
-   "eq_on": false,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 0,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "B1",
-   "virtual_output": true,
-   "device": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "limiter_on": false,
-   "limiter_db": -1,
-   "eq_on": true,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": -4,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 3,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": -2,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "B2",
-   "virtual_output": true,
-   "device": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "limiter_on": false,
-   "limiter_db": -1,
-   "eq_on": false,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 0,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  },
-  {
-   "label": "B3",
-   "virtual_output": true,
-   "device": "",
-   "gain_db": 0.0,
-   "mute": false,
-   "limiter_on": false,
-   "limiter_db": -1,
-   "eq_on": false,
-   "eq": [
-    {
-     "on": true,
-     "kind": "lowshelf",
-     "hz": 80,
-     "db": 0,
-     "q": 0.71
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 200,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 600,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 2000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "peak",
-     "hz": 5000,
-     "db": 0,
-     "q": 1
-    },
-    {
-     "on": true,
-     "kind": "highshelf",
-     "hz": 10000,
-     "db": 0,
-     "q": 0.71
-    }
-   ],
-   "plugins": [],
-   "eq_gain_db": 0
-  }
- ],
- "theme": "pro",
- "bg_enabled": false,
- "bg_image": "",
- "scenes": [],
- "ptt_enabled": false,
- "close_to_tray": false
 }

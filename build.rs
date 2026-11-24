@@ -12,29 +12,36 @@ fn main() {
 
     CxxQtBuilder::new_qml_module(QmlModule::new("org.obscura.vox").qml_files([
         "qml/Main.qml",
-        "qml/StripCard.qml",
-        "qml/BusRow.qml",
-        "qml/Fader.qml",
-        "qml/LevelMeter.qml",
+        "qml/Card.qml",
+        "qml/ChannelRow.qml",
+        "qml/ChannelStrip.qml",
         "qml/Chip.qml",
-        "qml/StreamList.qml",
-        "qml/DevicePicker.qml",
-        "qml/TextButton.qml",
-        "qml/ToneSlider.qml",
         "qml/CutFrame.qml",
-        "qml/Themes.qml",
+        "qml/DevicePicker.qml",
+        "qml/EqView.qml",
+        "qml/Fader.qml",
         "qml/Glass.qml",
-        "qml/SettingsPanel.qml",
+        "qml/Icon.qml",
+        "qml/IconButton.qml",
+        "qml/Inspector.qml",
         "qml/KeyCapture.qml",
-        "qml/Tray.qml",
         "qml/Knob.qml",
-        "qml/EqPanel.qml",
+        "qml/LevelMeter.qml",
+        "qml/MixerView.qml",
         "qml/PeqCurve.qml",
         "qml/PeqEditor.qml",
+        "qml/Pill.qml",
         "qml/PluginRack.qml",
-        "qml/Tabs.qml",
-        "qml/FxPanel.qml",
-        "qml/DynamicsPanel.qml",
+        "qml/Raised.qml",
+        "qml/RoutingView.qml",
+        "qml/SettingsPanel.qml",
+        "qml/StreamList.qml",
+        "qml/Tag.qml",
+        "qml/TextButton.qml",
+        "qml/Themes.qml",
+        "qml/Toggle.qml",
+        "qml/ToneSlider.qml",
+        "qml/Tray.qml",
     ]))
     .file("src/bridge.rs")
     .build();
@@ -48,11 +55,13 @@ fn main() {
     let mut qt = cc::Build::new();
     qt.cpp(true).file("src/qt_shim.cpp").flag_if_supported("-fPIC");
     println!("cargo:rustc-link-lib=Qt6Widgets");
-    if let Ok(out) = std::process::Command::new("pkg-config").args(["--cflags", "Qt6Widgets"]).output() {
+    println!("cargo:rustc-link-lib=KF6WindowSystem");
+    if let Ok(out) = std::process::Command::new("pkg-config").args(["--cflags", "Qt6Widgets", "Qt6Quick"]).output() {
         for flag in String::from_utf8_lossy(&out.stdout).split_whitespace() {
             qt.flag(flag);
         }
     }
+    qt.flag("-I/usr/include/KF6/KWindowSystem");
     qt.compile("qt_shim");
     println!("cargo:rerun-if-changed=src/qt_shim.cpp");
 }

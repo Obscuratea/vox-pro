@@ -35,6 +35,7 @@ fn claim_single_instance() -> Option<Option<File>> {
 unsafe extern "C" {
     fn vox_app_new(argc: i32, argv: *mut *mut c_char, name: *const c_char);
     fn vox_app_exec() -> i32;
+    pub fn vox_blur_behind(on: bool);
 }
 
 fn main() {

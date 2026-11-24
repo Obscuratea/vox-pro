@@ -411,7 +411,9 @@ impl Mixer {
             let input = [read_f32(&frame[0..4]), read_f32(&frame[4..8])];
             self.block.push(state.voice.process(input, gate));
         }
-        state.plugins.chain.process(&mut self.block);
+        if strip.fx_on {
+            state.plugins.chain.process(&mut self.block);
+        }
         self.dry.clear();
         self.dry.extend_from_slice(&self.block);
         // Nobody hears a muted strip or one routed nowhere, so don't run the pitch shifter for it.
@@ -522,7 +524,9 @@ impl Mixer {
             state.limit = 1.0;
         }
         let mut deepest = 1.0f32;
-        state.plugins.chain.process(&mut self.scratch);
+        if bus.fx_on {
+            state.plugins.chain.process(&mut self.scratch);
+        }
         if state.eq.is_on() {
             for frame in self.scratch.iter_mut() {
                 *frame = state.eq.process(*frame);

@@ -11,6 +11,10 @@ Rectangle {
     property string kind: "bus"
     property int index: 0
     signal done()
+    /// Sits inside the EQ page instead of covering the window: no backdrop, no Done button, cells wrap to the width.
+    property bool embedded: false
+    /// The height it needs before the curve gets too small to use.
+    readonly property real wantedHeight: layout.implicitHeight + (embedded ? 0 : 48)
 
     readonly property var target: kind === "bus" ? app.cfg.buses[index] : app.cfg.strips[index]
     readonly property var cells: target && target.eq ? target.eq : []
@@ -38,12 +42,13 @@ Rectangle {
         set(t => { mutate(t.eq[i]); t.eq_on = true; });
     }
 
-    color: app.bg
-    MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }   // nothing reaches the mixer underneath
+    color: embedded ? "transparent" : app.bg
+    MouseArea { anchors.fill: parent; enabled: !editor.embedded; acceptedButtons: Qt.AllButtons; onWheel: wheel => wheel.accepted = true }   // nothing reaches the mixer underneath
 
     ColumnLayout {
+        id: layout
         anchors.fill: parent
-        anchors.margins: 24
+        anchors.margins: editor.embedded ? 0 : 24
         spacing: 14
 
         RowLayout {
@@ -58,14 +63,14 @@ Rectangle {
             }
             Text {
                 Layout.fillWidth: true
-                text: editor.app.t("Parametric EQ")
+                text: editor.width >= 700 ? editor.app.t("Parametric EQ") : ""
                 color: editor.app.dim
                 font.family: editor.app.mono
                 font.pixelSize: 13
                 font.letterSpacing: editor.app.soft || editor.app.diamond ? 0.3 : 2
             }
             ToneSlider {
-                Layout.preferredWidth: 260
+                Layout.preferredWidth: Math.max(120, Math.min(260, editor.width * 0.3))
                 app: editor.app
                 label: editor.app.t("Output")
                 from: -12
@@ -90,6 +95,7 @@ Rectangle {
             }
             TextButton {
                 app: editor.app
+                visible: !editor.embedded
                 text: "Done  ⟲"
                 onClicked: editor.done()
             }
@@ -99,6 +105,7 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.minimumHeight: 170
             radius: editor.app.rCard
             color: editor.app.diamond ? "transparent" : editor.app.panelFill
             border.color: editor.app.diamond ? editor.app.frameDim : editor.app.edge
@@ -119,6 +126,7 @@ Rectangle {
             MouseArea {
                 id: pad
                 anchors.fill: curve
+                preventStealing: true
                 hoverEnabled: true
                 property int grabbed: -1
                 property int hovered: -1
@@ -198,9 +206,11 @@ Rectangle {
         }
 
         // ---- The six cells ----
-        RowLayout {
+        GridLayout {
             Layout.fillWidth: true
-            spacing: 12
+            columns: editor.width >= 1000 ? 6 : editor.width >= 520 ? 3 : 2
+            columnSpacing: 12
+            rowSpacing: 12
             Repeater {
                 model: editor.cells.length
                 Rectangle {

@@ -9,19 +9,33 @@ Rectangle {
     property bool recording: false
     signal captured(int key)
 
-    implicitWidth: 150
-    implicitHeight: 32
-    radius: app.soft ? height / 2 : 0
-    color: recording ? Qt.alpha(app.accent, 0.18) : app.soft ? app.tonal : "transparent"
-    border.color: recording || mouse.containsMouse ? app.accent : app.soft ? app.controlEdge : app.line
+    implicitWidth: Math.max(84, keyText.implicitWidth + 20)
+    implicitHeight: 28
+    radius: app.soft ? 7 : 0
+    // Drawn like a key cap: sunken, with a thicker bottom edge.
+    color: recording ? Qt.alpha(app.accent, 0.18) : app.well
+    border.color: recording || mouse.containsMouse ? app.accent : app.line2
     activeFocusOnTab: true
     onActiveFocusChanged: if (!activeFocus) recording = false
 
+    Rectangle {
+        visible: !cap.recording && !mouse.containsMouse
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: cap.radius / 2
+        anchors.rightMargin: cap.radius / 2
+        height: 2
+        color: cap.app.line2
+    }
     Text {
+        id: keyText
         anchors.centerIn: parent
-        text: cap.recording ? "Press keys…  (Esc cancels)" : cap.key === 0 ? "Not set" : cap.app.keyText(cap.key)
-        color: cap.recording || cap.key !== 0 ? cap.app.ink : cap.app.dim
-        font.pixelSize: 12
+        text: cap.recording ? "Press keys…  (Esc cancels)" : cap.key === 0 ? "Set a key" : cap.app.keyText(cap.key)
+        color: cap.recording || cap.key !== 0 ? cap.app.ink : cap.app.accent
+        font.family: cap.key !== 0 && !cap.recording ? cap.app.mono : Qt.application.font.family
+        font.pixelSize: cap.key !== 0 && !cap.recording ? 11 : 12
+        font.weight: Font.DemiBold
     }
     MouseArea {
         id: mouse

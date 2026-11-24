@@ -1,6 +1,6 @@
 import QtQuick
 
-// Stereo peak meter from -60 to 0 dB. Turns amber above -6 dB and red near clipping.
+// Stereo peak meter from -60 to 0 dB, lit with the accent gradient that turns amber, then red, near the top.
 Item {
     id: meter
     required property var app
@@ -16,7 +16,7 @@ Item {
     // Clip light: lit when a sample reaches full scale, stays lit until the meter is clicked.
     property bool clipped: false
 
-    implicitWidth: vertical ? 12 : 120
+    implicitWidth: vertical ? 13 : 120
     implicitHeight: vertical ? 120 : 10
 
     function fraction(peak) {
@@ -40,23 +40,37 @@ Item {
             id: bar
             required property int index
             readonly property real level: index === 0 ? meter.leftLevel : meter.rightLevel
-            readonly property real thickness: ((meter.vertical ? meter.width : meter.height) - 2) / 2
+            readonly property real thickness: ((meter.vertical ? meter.width : meter.height) - 3) / 2
 
-            x: meter.vertical ? index * (thickness + 2) : 0
-            y: meter.vertical ? 0 : index * (thickness + 2)
+            x: meter.vertical ? index * (thickness + 3) : 0
+            y: meter.vertical ? 0 : index * (thickness + 3)
             width: meter.vertical ? thickness : meter.width
             height: meter.vertical ? meter.height : thickness
             radius: meter.app.soft ? thickness / 2 : 0
-            color: meter.app.line
-            clip: meter.app.soft
+            color: meter.app.well
+            clip: true
 
-            Rectangle {
+            // The lit part shows a slice of one gradient laid over the whole bar, so loud reads amber, then red.
+            Item {
                 x: 0
                 y: meter.vertical ? parent.height * (1 - bar.level) : 0
                 width: meter.vertical ? parent.width : parent.width * bar.level
                 height: meter.vertical ? parent.height * bar.level : parent.height
-                radius: meter.app.soft ? thickness / 2 : 0
-                color: bar.level > 0.97 ? meter.app.danger : bar.level > 0.9 ? meter.app.warning : meter.app.accent
+                clip: true
+                Rectangle {
+                    x: 0
+                    y: meter.vertical ? parent.height - height : 0
+                    width: meter.vertical ? parent.width : bar.width
+                    height: meter.vertical ? bar.height : parent.height
+                    radius: meter.app.soft ? bar.thickness / 2 : 0
+                    gradient: Gradient {
+                        orientation: meter.vertical ? Gradient.Vertical : Gradient.Horizontal
+                        GradientStop { position: meter.vertical ? 1 : 0; color: meter.app.accentEnd }
+                        GradientStop { position: meter.vertical ? 0.38 : 0.62; color: meter.app.accent }
+                        GradientStop { position: meter.vertical ? 0.16 : 0.84; color: meter.app.warning }
+                        GradientStop { position: meter.vertical ? 0 : 1; color: meter.app.danger }
+                    }
+                }
             }
             // The peak-hold tick.
             Rectangle {
