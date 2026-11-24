@@ -272,7 +272,6 @@ Flickable {
             id: heading
             spacing: 10
             Text { text: "Settings"; color: scroller.app.ink; font.pixelSize: 18; font.weight: Font.DemiBold }
-            Text { anchors.baseline: parent.children[0].baseline; text: "Changes apply straight away."; color: scroller.app.dim; font.pixelSize: 12 }
         }
 
         // Masonry: each card goes to the shortest column, in order.
@@ -319,10 +318,10 @@ Flickable {
 
                 Repeater {
                     model: [
-                        { group: "hw", title: "Hardware inputs", note: "Microphones and line inputs", one: "input" },
-                        { group: "virt", title: "Virtual inputs", note: "Devices that programs play into", one: "virtual input" },
-                        { group: "a", title: "Listen outputs", note: "A: headphones, speakers", one: "listen output" },
-                        { group: "b", title: "Virtual mics", note: "B: what Discord or OBS records", one: "virtual mic" }
+                        { group: "hw", title: "Hardware inputs", one: "input" },
+                        { group: "virt", title: "Virtual inputs", one: "virtual input" },
+                        { group: "a", title: "Listen outputs", one: "listen output" },
+                        { group: "b", title: "Virtual mics", one: "virtual mic" }
                     ]
                     ColumnLayout {
                         id: groupRow
@@ -335,7 +334,6 @@ Flickable {
                         spacing: 0
                         Opt {
                             title: groupRow.modelData.title
-                            note: groupRow.modelData.note
                             Step {
                                 value: groupRow.count
                                 canAdd: groupRow.count < layoutCard.app.limits[groupRow.group]
@@ -361,7 +359,6 @@ Flickable {
                 }
                 Opt {
                     title: "Strip detail"
-                    note: "Compact keeps only the fader, meter and mute"
                     Seg {
                         options: ["Comfortable", "Compact"]
                         current: scroller.app.compact ? 1 : 0
@@ -381,8 +378,8 @@ Flickable {
                         }
                     }
                 }
-                PrefOpt { key: "fit_detail"; fallback: true; title: "Fit detail to window size"; note: "Narrow windows slim the strips down instead of scrolling" }
-                PrefOpt { key: "inspector_on_select"; fallback: true; title: "Open the inspector on select"; note: "Clicking a strip opens its details" }
+                PrefOpt { key: "fit_detail"; fallback: true; title: "Fit detail to window size" }
+                PrefOpt { key: "inspector_on_select"; fallback: true; title: "Open the inspector on select" }
             }
 
             // ---- Appearance ----
@@ -488,10 +485,9 @@ Flickable {
                 PrefOpt {
                     key: "blur"; fallback: true
                     title: "Blur what is behind the window"
-                    note: scroller.app.glassy ? "Glass theme, needs KWin blur" : "Only the Glass theme is see-through"
                     usable: scroller.app.glassy
                 }
-                PrefOpt { key: "system_accent"; title: "Follow the system accent colour"; note: "Instead of the theme's own" }
+                PrefOpt { key: "system_accent"; title: "Follow the system accent colour" }
                 Opt {
                     title: "Meters"
                     Seg {
@@ -500,7 +496,7 @@ Flickable {
                         onPicked: i => scroller.app.setPref(p => p.meter_style = ["gradient", "segments", "solid"][i])
                     }
                 }
-                PrefOpt { key: "peak_hold"; fallback: true; title: "Peak hold"; note: "Meters keep the loudest point for a moment" }
+                PrefOpt { key: "peak_hold"; fallback: true; title: "Peak hold" }
                 PrefOpt { key: "animations"; fallback: true; title: "Animations" }
             }
 
@@ -529,7 +525,6 @@ Flickable {
                 }
                 Opt {
                     title: scroller.app.scenes.length === 0 ? "No scenes yet" : "New scene"
-                    note: "Saves every level, mute and route as they are now. They show in the top bar."
                 }
                 RowLayout {
                     Layout.fillWidth: true
@@ -583,7 +578,6 @@ Flickable {
                 Opt {
                     visible: scroller.app.shortcutsOk
                     title: "Push to talk"
-                    note: "The B mics stay shut until the key is held"
                     Toggle {
                         app: scroller.app
                         checked: !!scroller.app.cfg.ptt_enabled
@@ -614,7 +608,6 @@ Flickable {
                 Opt {
                     visible: scroller.app.shortcutsOk
                     title: "Mute all mics"
-                    note: "Works while games are focused"
                     KeyCapture { app: scroller.app; key: scroller.app.muteKey; onCaptured: k => scroller.app.setShortcut("mute-mics", k) }
                     TextButton {
                         visible: scroller.app.muteKey !== 0
@@ -626,8 +619,7 @@ Flickable {
                 Opt {
                     visible: scroller.app.shortcutsOk
                     title: "Next scene"
-                    note: scroller.app.scenes.length === 0 ? "Save a scene first" : "Goes round the saved scenes"
-                    KeyCapture { app: scroller.app; key: scroller.app.sceneKey; onCaptured: k => scroller.app.setShortcut("next-scene", k) }
+                                        KeyCapture { app: scroller.app; key: scroller.app.sceneKey; onCaptured: k => scroller.app.setShortcut("next-scene", k) }
                     TextButton {
                         visible: scroller.app.sceneKey !== 0
                         app: scroller.app; implicitHeight: 28; implicitWidth: 32; text: "✕"
@@ -656,10 +648,10 @@ Flickable {
                 height: implicitHeight
                 onHeightChanged: Qt.callLater(grid.relayout)
 
-                PrefOpt { key: "autostart"; title: "Start with the computer"; note: "When you log in" }
+                PrefOpt { key: "autostart"; title: "Start with the computer" }
                 Opt {
                     title: "Keep running in the tray"
-                    note: scroller.app.trayOn ? "Closing the window only hides it" : "No system tray found"
+                    note: scroller.app.trayOn ? "" : "No system tray found"
                     Toggle {
                         app: scroller.app
                         enabled: scroller.app.trayOn
@@ -670,10 +662,10 @@ Flickable {
                 PrefOpt {
                     key: "start_hidden"
                     title: "Start hidden"
-                    note: scroller.app.trayOn ? "Only the tray icon at start" : "Needs a system tray"
+                    note: scroller.app.trayOn ? "" : "No system tray found"
                     usable: scroller.app.trayOn
                 }
-                PrefOpt { key: "restore_scene"; title: "Restore the last scene"; note: "Load the scene you used last at start" }
+                PrefOpt { key: "restore_scene"; title: "Restore the last scene" }
                 Opt {
                     title: "Check for updates"
                     note: "Once at launch"
@@ -708,7 +700,7 @@ Flickable {
 
                 Opt {
                     title: "Sample rate"
-                    note: audioCard.rateWaits ? "Used from the next start" : "Vox asks PipeWire for this rate"
+                    note: audioCard.rateWaits ? "Used from the next start" : ""
                     noteColor: audioCard.rateWaits ? scroller.app.warning : scroller.app.faint
                     Seg {
                         options: ["44.1k", "48k", "96k"]
@@ -718,8 +710,7 @@ Flickable {
                 }
                 Opt {
                     title: "Latency"
-                    note: audioCard.latencyWaits ? "Used from the next start"
-                        : "Lower is faster but heavier" + (scroller.app.usage.cycle > 0 ? " · now " + scroller.app.usage.cycle.toFixed(1) + " ms" : "")
+                    note: audioCard.latencyWaits ? "Used from the next start" : ""
                     noteColor: audioCard.latencyWaits ? scroller.app.warning : scroller.app.faint
                     Seg {
                         options: ["Low", "Balanced", "Safe"]
@@ -730,25 +721,22 @@ Flickable {
                 PrefOpt {
                     key: "default_mic"
                     title: "Use " + audioCard.firstMic + " as the system microphone"
-                    note: "Programs with \"default mic\" hear " + audioCard.firstMic
                     onSwitched: on => { if (on) scroller.app.claimDefaults(false); }
                 }
                 PrefOpt {
                     key: "default_output"
                     title: "Use " + audioCard.firstVirt + " as the system output"
-                    note: "Programs that play on the default output land here"
                     onSwitched: on => { if (on) scroller.app.claimDefaults(false); }
                 }
                 Opt {
                     title: "Limiter on every output"
-                    note: "Nothing leaves louder than the ceiling"
                     Toggle {
                         app: scroller.app
                         checked: audioCard.allLimited
                         onToggled: { const on = !audioCard.allLimited; scroller.app.change(c => { for (const b of c.buses) b.limiter_on = on; }); }
                     }
                 }
-                PrefOpt { key: "lock_mute"; title: "Mute mics when the screen locks"; note: "They come back when you unlock" }
+                PrefOpt { key: "lock_mute"; title: "Mute mics when the screen locks" }
             }
 
             // ---- Recording ----
@@ -792,7 +780,7 @@ Flickable {
                     note: "Music/" + scroller.app.appName
                     Lnk { text: "Reset"; onClicked: scroller.app.setPref(p => p.record_dir = "") }
                 }
-                PrefOpt { key: "tray_rec_dot"; fallback: true; title: "Show a red dot in the tray"; note: "While something records" }
+                PrefOpt { key: "tray_rec_dot"; fallback: true; title: "Show a red dot in the tray" }
             }
 
             // ---- Vox Pro: plugins ----
@@ -807,14 +795,14 @@ Flickable {
 
                 Opt {
                     title: "Installed"
-                    note: scroller.app.pro && scroller.app.pluginsScanned ? "LV2, CLAP and VST3 from the usual folders" : "Looking…"
+                    note: scroller.app.pro && scroller.app.pluginsScanned ? "" : "Looking…"
                     Cap { text: scroller.app.pro ? String(scroller.app.pluginList.length) : "" }
                     Lnk { text: "Rescan"; tip: "Look for newly installed plugins"; onClicked: scroller.app.rescanPlugins() }
                 }
                 Opt {
                     visible: scroller.app.pro && scroller.app.pluginsSafe
                     title: "Plugins are off"
-                    note: "Vox Pro closed while a plugin was running, so plugins were switched off at launch"
+                    note: "Switched off after a crash"
                     noteColor: scroller.app.warning
                     Lnk { text: "Turn back on"; onClicked: scroller.app.resumePlugins() }
                 }
