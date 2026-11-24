@@ -1,6 +1,6 @@
 //! Global shortcuts (push to talk, mute the mics) through KDE's shortcut service, KGlobalAccel,
 //! the same service System Settings > Shortcuts edits. The service stores the keys, so they survive
-//! restarts and show up in System Settings under "Vox Pro". Wayland apps can't grab keys
+//! restarts and show up in System Settings under the app's name. Wayland apps can't grab keys
 //! themselves, which is why this goes over D-Bus. On other desktops there is no such service and the
 //! settings simply say shortcuts aren't available.
 //!
@@ -14,14 +14,19 @@ use zbus::blocking::{Connection, MessageIterator};
 use zbus::message::Type;
 use zbus::MatchRule;
 
-const COMPONENT: &str = "vox-pro";
+const COMPONENT: &str = crate::APP_ID;
 const SERVICE: &str = "org.kde.kglobalaccel";
 const ACCEL_PATH: &str = "/kglobalaccel";
 const ACCEL: &str = "org.kde.KGlobalAccel";
 const COMPONENT_IFACE: &str = "org.kde.kglobalaccel.Component";
 
 /// (action id, label shown in System Settings)
-pub const ACTIONS: [(&str, &str); 2] = [("ptt", "Push to talk"), ("mute-mics", "Mute or unmute the microphones")];
+pub const ACTIONS: [(&str, &str); 4] = [
+    ("ptt", "Push to talk"),
+    ("mute-mics", "Mute or unmute the microphones"),
+    ("next-scene", "Next scene"),
+    ("show-hide", "Show or hide the window"),
+];
 
 pub struct Accel {
     conn: Connection,
@@ -30,7 +35,7 @@ pub struct Accel {
 
 fn action_id(component: &str, name: &str) -> Option<Vec<String>> {
     let (_, label) = ACTIONS.iter().find(|(id, _)| *id == name)?;
-    Some(vec![component.into(), name.into(), "Vox Pro".into(), (*label).into()])
+    Some(vec![component.into(), name.into(), crate::APP_NAME.into(), (*label).into()])
 }
 
 /// KGlobalAccel's object path for a component: its name with dots and dashes turned into underscores.
@@ -117,7 +122,7 @@ fn on_signal(shared: &Shared, member: &str, action: &str) {
     match (member, action) {
         ("globalShortcutPressed", "ptt") => shared.ptt_held.store(true, Ordering::Relaxed),
         ("globalShortcutReleased", "ptt") => shared.ptt_held.store(false, Ordering::Relaxed),
-        ("globalShortcutPressed", "mute-mics") => shared.events.lock().unwrap().push("mute-mics".into()),
+        ("globalShortcutPressed", "mute-mics" | "next-scene" | "show-hide") => shared.events.lock().unwrap().push(action.into()),
         _ => {}
     }
 }
@@ -132,7 +137,7 @@ mod tests {
     #[ignore]
     fn keys_bind_and_presses_arrive() {
         let shared = Arc::new(Shared::new());
-        let name = "vox-pro-selftest";
+        let name = &format!("{}-selftest", crate::APP_ID);
         let accel = Accel::start_as(name, shared.clone()).expect("KGlobalAccel is running");
         let key = 0x04000000 | 0x08000000 | 0x0100003b; // Ctrl+Alt+F12
         assert_eq!(accel.set_key("ptt", key), key, "the key should be accepted");

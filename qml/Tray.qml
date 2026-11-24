@@ -7,11 +7,13 @@ Platform.SystemTrayIcon {
     required property var app
     id: tray
     visible: available
-    icon.name: "vox-pro"
-    tooltip: "Vox Pro"
+    // Settings > Show a red dot in the tray: the theme's record icon while an output records.
+    readonly property bool recording: Object.keys(app.recordingSince).length > 0
+    icon.name: recording && app.prefs.tray_rec_dot !== false ? "media-record" : app.appName.toLowerCase().replace(" ", "-")
+    tooltip: recording ? app.appName + " · recording" : app.appName
     onActivated: reason => { if (reason === Platform.SystemTrayIcon.Trigger) app.toggleWindow(); }
     menu: Platform.Menu {
-        Platform.MenuItem { text: app.visible ? "Hide Vox Pro" : "Show Vox Pro"; onTriggered: app.toggleWindow() }
+        Platform.MenuItem { text: (app.visible ? "Hide " : "Show ") + app.appName; onTriggered: app.toggleWindow() }
         Platform.MenuSeparator {}
         Platform.MenuItem { text: app.micsMuted ? "Unmute microphones" : "Mute microphones"; onTriggered: app.muteMics(!app.micsMuted) }
         Platform.Menu {

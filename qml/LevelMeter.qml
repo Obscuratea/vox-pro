@@ -1,6 +1,7 @@
 import QtQuick
 
 // Stereo peak meter from -60 to 0 dB, lit with the accent gradient that turns amber, then red, near the top.
+// Settings > Meters picks the look: that gradient, the same in segments, or one solid colour.
 Item {
     id: meter
     required property var app
@@ -15,6 +16,8 @@ Item {
     property int ageRight: 0
     // Clip light: lit when a sample reaches full scale, stays lit until the meter is clicked.
     property bool clipped: false
+    readonly property string style: app.prefs ? app.prefs.meter_style || "gradient" : "gradient"
+    readonly property bool solid: style === "solid"
 
     implicitWidth: vertical ? 13 : 120
     implicitHeight: vertical ? 120 : 10
@@ -58,6 +61,7 @@ Item {
                 height: meter.vertical ? parent.height * bar.level : parent.height
                 clip: true
                 Rectangle {
+                    visible: meter.style !== "segments"
                     x: 0
                     y: meter.vertical ? parent.height - height : 0
                     width: meter.vertical ? parent.width : bar.width
@@ -65,17 +69,44 @@ Item {
                     radius: meter.app.soft ? bar.thickness / 2 : 0
                     gradient: Gradient {
                         orientation: meter.vertical ? Gradient.Vertical : Gradient.Horizontal
-                        GradientStop { position: meter.vertical ? 1 : 0; color: meter.app.accentEnd }
+                        GradientStop { position: meter.vertical ? 1 : 0; color: meter.solid ? meter.app.accent : meter.app.accentEnd }
                         GradientStop { position: meter.vertical ? 0.38 : 0.62; color: meter.app.accent }
-                        GradientStop { position: meter.vertical ? 0.16 : 0.84; color: meter.app.warning }
-                        GradientStop { position: meter.vertical ? 0 : 1; color: meter.app.danger }
+                        GradientStop { position: meter.vertical ? 0.16 : 0.84; color: meter.solid ? meter.app.accent : meter.app.warning }
+                        GradientStop { position: meter.vertical ? 0 : 1; color: meter.solid ? meter.app.accent : meter.app.danger }
+                    }
+                }
+                // Segments: the same colours in 3 px steps with 1 px gaps, painted once for the whole bar and
+                // uncovered by the level like the gradient.
+                Canvas {
+                    visible: meter.style === "segments"
+                    x: 0
+                    y: meter.vertical ? parent.height - height : 0
+                    width: meter.vertical ? parent.width : bar.width
+                    height: meter.vertical ? bar.height : parent.height
+                    readonly property var colors: [meter.app.accentEnd, meter.app.accent, meter.app.warning, meter.app.danger]
+                    onColorsChanged: requestPaint()
+                    onWidthChanged: requestPaint()
+                    onHeightChanged: requestPaint()
+                    onVisibleChanged: if (visible) requestPaint()
+                    onPaint: {
+                        const c = getContext("2d");
+                        c.reset();
+                        if (!visible) return;
+                        const along = meter.vertical ? height : width;
+                        const g = meter.vertical ? c.createLinearGradient(0, height, 0, 0) : c.createLinearGradient(0, 0, width, 0);
+                        g.addColorStop(0, colors[0]); g.addColorStop(0.62, colors[1]); g.addColorStop(0.84, colors[2]); g.addColorStop(1, colors[3]);
+                        c.fillStyle = g;
+                        for (let at = 0; at < along; at += 4) {
+                            if (meter.vertical) c.fillRect(0, height - at - 3, width, 3);
+                            else c.fillRect(at, 0, 3, height);
+                        }
                     }
                 }
             }
             // The peak-hold tick.
             Rectangle {
                 readonly property real held: bar.index === 0 ? meter.holdLeft : meter.holdRight
-                visible: held > 0.02
+                visible: held > 0.02 && (!meter.app.prefs || meter.app.prefs.peak_hold !== false)
                 x: meter.vertical ? 0 : Math.min(parent.width - 2, parent.width * held)
                 y: meter.vertical ? Math.min(parent.height - 2, parent.height * (1 - held)) : 0
                 width: meter.vertical ? parent.width : 2

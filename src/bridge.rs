@@ -156,6 +156,8 @@ static STATE: OnceLock<State> = OnceLock::new();
 /// Called once from main before the UI loads.
 pub fn init(engine: Handle, settings: Settings) {
     let accel = Accel::start(engine.shared.clone());
+    crate::desktop::watch_lock(engine.shared.clone());
+    crate::desktop::set_autostart(settings.prefs.autostart);
     let _ = STATE.set(State { engine, current: Mutex::new(settings), accel });
 }
 
@@ -292,11 +294,11 @@ impl qobject::Mixer {
         *last = Some((now, ticks));
         // One PipeWire cycle, in milliseconds: how long a sound waits in Vox before it moves on.
         let frames = state().engine.shared.cycle.load(std::sync::atomic::Ordering::Relaxed) as f64;
-        let cycle = frames / crate::dsp::SAMPLE_RATE as f64 * 1000.0;
+        let cycle = frames / crate::dsp::sample_rate() as f64 * 1000.0;
         let json = serde_json::json!({
             "cpu": (cpu * 10.0).round() / 10.0,
             "ram": ram_mib().unwrap_or(0.0).round(),
-            "rate": crate::dsp::SAMPLE_RATE as u32,
+            "rate": crate::dsp::sample_rate() as u32,
             "cycle": (cycle * 10.0).round() / 10.0,
         });
         qobject::QString::from(&json.to_string())
@@ -330,7 +332,10 @@ impl qobject::Mixer {
     fn apply(&self, json: &qobject::QString) {
         let Some(settings) = Settings::from_json(&json.to_string()) else { return };
         let state = state();
-        *state.current.lock().unwrap() = settings.clone();
+        let was = std::mem::replace(&mut *state.current.lock().unwrap(), settings.clone());
+        if was.prefs.autostart != settings.prefs.autostart {
+            crate::desktop::set_autostart(settings.prefs.autostart);
+        }
         let _ = state.engine.sender.lock().unwrap().send(Command::Apply(settings));
     }
 

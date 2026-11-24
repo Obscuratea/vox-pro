@@ -57,9 +57,9 @@ pub struct Recorder {
     pub path: PathBuf,
 }
 
-/// Where recordings go: ~/Music/Vox Pro.
+/// Where recordings go: ~/Music/<app name>.
 pub fn folder() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(|h| PathBuf::from(h).join("Music").join("Vox Pro"))
+    std::env::var_os("HOME").map(|h| PathBuf::from(h).join("Music").join(crate::APP_NAME))
 }
 
 fn stamp() -> String {
@@ -75,8 +75,9 @@ fn stamp() -> String {
 
 impl Recorder {
     /// Start a new file for the bus called `label`.
-    pub fn start(label: &str, rate: u32, format: Format) -> Result<Self, String> {
-        let dir = folder().ok_or("no home folder")?;
+    /// Start a new file for output `label` in `dir` (empty for the default folder).
+    pub fn start(dir: &str, label: &str, rate: u32, format: Format) -> Result<Self, String> {
+        let dir = if dir.is_empty() { folder().ok_or("no home folder")? } else { PathBuf::from(dir) };
         std::fs::create_dir_all(&dir).map_err(|e| format!("can't make {}: {e}", dir.display()))?;
         Self::to_path(dir.join(format!("{label}-{}.{}", stamp(), format.extension())), rate, format)
     }
@@ -335,7 +336,7 @@ impl OpusSink {
         head.push(0);
         ogg.write_packet(head, serial, ogg::PacketWriteEndInfo::EndPage, 0).map_err(|e| e.to_string())?;
         let mut tags = Vec::from(*b"OpusTags");
-        let vendor = b"Vox Pro";
+        let vendor = crate::APP_NAME.as_bytes();
         tags.extend((vendor.len() as u32).to_le_bytes());
         tags.extend(vendor);
         tags.extend(0u32.to_le_bytes());
@@ -409,7 +410,7 @@ mod tests {
 
     #[test]
     fn a_recording_is_a_valid_wav_with_the_right_length() {
-        let path = std::env::temp_dir().join(format!("vox-pro-rec-test-{}.wav", std::process::id()));
+        let path = std::env::temp_dir().join(format!("{}-rec-test-{}.wav", crate::APP_ID, std::process::id()));
         let rec = Recorder::to_path(path.clone(), 48_000, Format::Wav).unwrap();
         let cycle: Vec<[f32; 2]> = (0..256).map(|i| [i as f32 / 256.0, -(i as f32) / 256.0]).collect();
         for _ in 0..10 {
@@ -428,7 +429,7 @@ mod tests {
 
     /// Record two seconds of a 1 kHz tone in `format` and return the file.
     fn record_tone(format: Format, name: &str) -> PathBuf {
-        let path = std::env::temp_dir().join(format!("vox-pro-{name}-{}", std::process::id()));
+        let path = std::env::temp_dir().join(format!("{}-{name}-{}", crate::APP_ID, std::process::id()));
         let rec = Recorder::to_path(path.clone(), 48_000, format).unwrap();
         for cycle in 0..375 {
             let frames: Vec<[f32; 2]> = (0..256)

@@ -18,8 +18,10 @@ Item {
     readonly property real pad: 16
     readonly property real stripHeight: height - 2 * pad - 26
     // Full strips need room for the quick switches and the routing buttons, across and down.
-    readonly property bool condensed: app.compact || stripHeight < 410
-        || nIn * 150 + nOut * 88 > width - 2 * pad - Math.max(0, nIn + nOut - nSections) * 10 - Math.max(0, nSections - 1) * 20
+    // Settings > Fit detail to window size off: a narrow window keeps full strips and the row scrolls instead
+    // (a short one still slims them, since full strips don't fit its height).
+    readonly property bool condensed: app.compact || stripHeight < 410 || app.prefs.fit_detail !== false && (
+        nIn * 150 + nOut * 88 > width - 2 * pad - Math.max(0, nIn + nOut - nSections) * 10 - Math.max(0, nSections - 1) * 20)
     readonly property real gap: condensed ? 8 : 10
     readonly property real sectionGap: condensed ? 14 : 20
     readonly property real gaps: Math.max(0, nIn + nOut - nSections) * gap + Math.max(0, nSections - 1) * sectionGap

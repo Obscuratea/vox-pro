@@ -13,7 +13,11 @@ ApplicationWindow {
     height: parseInt(arg("--size", "1600x900").split("x")[1])
     minimumWidth: 360
     minimumHeight: 480
-    visible: true
+    // Settings > Start hidden: start in the tray (shown anyway if no tray turns up, see trayCheck).
+    visible: !launchHidden
+    property bool launchHidden: !!(cfg.prefs || {}).start_hidden && Qt.platform.pluginName !== "offscreen"
+                                && Qt.application.arguments.indexOf("--screenshot") < 0
+    Timer { id: trayCheck; interval: 2500; running: win.launchHidden; onTriggered: if (!win.trayOn) { win.launchHidden = false; win.show(); } }
     title: appName
     // Which app this is. Every QML file but this one is the same in Vox Obscurus and Vox Pro; they ask these.
     readonly property bool pro: true
@@ -22,7 +26,7 @@ ApplicationWindow {
     // Glass themes leave the window see-through; KWin blurs the desktop behind it.
     color: glassy && !bgOn ? "transparent" : bg
     onGlassyChanged: blurTimer.restart()
-    Timer { id: blurTimer; interval: 300; running: true; onTriggered: mixer.blurBehind(win.glassy && !win.bgOn) }
+    Timer { id: blurTimer; interval: 300; running: true; onTriggered: mixer.blurBehind(win.glassy && !win.bgOn && win.prefs.blur !== false) }
     onBgOnChanged: blurTimer.restart()
     onDarkChanged: sampler.requestPaint()   // the picture is measured at its bright end for dark themes, dark end for Light
 
@@ -93,8 +97,8 @@ ApplicationWindow {
         interval: 1000; repeat: true; running: !win.ownColors
         onTriggered: { const a = mixer.schemeAccent(); if (a !== win.schemeAccent) win.schemeAccent = a; }
     }
-    readonly property color accent: bgOn && imgReady && !glassy ? imgA : ownColors ? theme.accent : systemAccent
-    readonly property color accentEnd: bgOn && imgReady && !glassy ? imgB : ownColors && theme.accentEnd ? theme.accentEnd : soft ? Qt.hsla(accent.hslHue + 0.045, accent.hslSaturation, accent.hslLightness, 1) : accent
+    readonly property color accent: bgOn && imgReady && !glassy ? imgA : ownColors && !prefs.system_accent ? theme.accent : systemAccent
+    readonly property color accentEnd: bgOn && imgReady && !glassy ? imgB : ownColors && theme.accentEnd && !prefs.system_accent ? theme.accentEnd : soft ? Qt.hsla(accent.hslHue + 0.045, accent.hslSaturation, accent.hslLightness, 1) : accent
     readonly property color onFill: soft ? baseHighlight : accent
     readonly property color select: diamond ? "#4b3a85" : baseHighlight
     readonly property color accentInk: baseHighlightedText
@@ -123,10 +127,24 @@ ApplicationWindow {
     property string updateJson: ""
     // Dev aid: a screenshot only captures `page`, so --licences moves the dialog layer into it.
     Component.onCompleted: {
+        bootPrefs = { rate: prefs.sample_rate || 48000, latency: prefs.latency || "balanced" }
         reshape()
         if (Qt.application.arguments.indexOf("--licences") >= 0) Overlay.overlay.parent = page
         if (cfg.check_updates !== false && Qt.application.arguments.indexOf("--screenshot") < 0) mixer.updateCheck()
+        if (prefs.restore_scene && prefs.last_scene) {
+            const i = scenes.findIndex(sc => sc.name === prefs.last_scene);
+            if (i >= 0 && !sceneActive(i)) applyScene(i);
+        }
     }
+    // Settings > Use B1 / Apps as the system microphone / output: claimed a moment after start (once the
+    // devices exist) and whenever the switch is turned on.
+    function claimDefaults(quiet) {
+        if (prefs.default_mic && bIdx.length > 0)
+            mixer.makeDefault(nodePrefix + slug(cfg.buses[bIdx[0]].label));
+        if (prefs.default_output && virtIdx.length > 0)
+            mixer.makeDefault(nodePrefix + slug(cfg.strips[virtIdx[0]].label));
+    }
+    Timer { interval: 3000; running: Qt.application.arguments.indexOf("--screenshot") < 0; onTriggered: win.claimDefaults(true) }
 
     // Picture background (Settings > Background). `--bg <file>` is a dev aid for screenshots.
     readonly property int bgArg: Qt.application.arguments.indexOf("--bg")
@@ -207,6 +225,13 @@ ApplicationWindow {
     readonly property bool showVirtual: ui.show_virtual !== false
     readonly property bool showOutputs: ui.show_outputs !== false
     readonly property bool compact: !!ui.compact
+    // Settings-page preferences (settings.rs Prefs).
+    readonly property var prefs: cfg.prefs || ({})
+    function setPref(mutate) { change(c => { c.prefs = c.prefs || {}; mutate(c.prefs); }); }
+    onPrefsChanged: blurTimer.restart()
+    readonly property bool anim: prefs.animations !== false
+    // The rate and latency the engine started with (changes wait for the next start).
+    property var bootPrefs: ({ rate: 48000, latency: "balanced" })
     function setUi(mutate) { change(c => { c.ui = c.ui || {}; mutate(c.ui); }); }
 
     // The channel the inspector shows. `--sel bus:0` and `--insp 0|1` are dev aids for screenshots.
@@ -220,6 +245,10 @@ ApplicationWindow {
         if (!dockable) sheetOpen = true;
         else if (ui.inspector === false) setUi(u => u.inspector = true);
     }
+    // A click on a strip: select it, and open the inspector unless Settings says not to.
+    function pickChannel(kind, index) { selectChannel(kind, index, prefs.inspector_on_select !== false || inspShown); }
+    // Remove a channel, asking first unless Settings says not to. `me` is what the inspector compares with.
+    function askRemove(kind, index, me) { if (prefs.confirm_remove === false) removeChannel(kind, index); else removeAsk = me; }
     function closeInspector() { if (dockable) setUi(u => u.inspector = false); else sheetOpen = false; }
     function toggleInspector() {
         if (view !== "mixer") { view = "mixer"; if (!inspWanted) selectChannel(sel.kind, sel.index, true); return; }
@@ -343,14 +372,16 @@ ApplicationWindow {
     }
     property string status: Qt.application.arguments.indexOf("--status") >= 0 ? "System output is now Vox Pro Apps." : ""
 
-    // ---- Recording (Pro): one entry per output, the file being written, "!reason" if it failed, "" when idle ----
+    // ---- Recording: one entry per output, the file being written, "!reason" if it failed, "" when idle ----
     property var recording: []
     property string recordingJson: "[]"
     // When each output's recording started (ms), by label, for the timer in the status bar.
     property var recordingSince: ({})
     function isRecording(bus) { return !!recording[bus] && recording[bus][0] !== "!"; }
     function recordBus(bus, on) { mixer.record(bus, on); }
-    function openRecordings() { Qt.openUrlExternally(StandardPaths.writableLocation(StandardPaths.MusicLocation) + "/Vox Pro"); }
+    function openRecordings() { Qt.openUrlExternally(prefs.record_dir ? "file://" + prefs.record_dir : StandardPaths.writableLocation(StandardPaths.MusicLocation) + "/" + appName); }
+    // Where recordings go, for display: "Music/Vox Pro" or the chosen folder with ~ for home.
+    readonly property string recordFolder: prefs.record_dir ? prefs.record_dir.replace(StandardPaths.writableLocation(StandardPaths.HomeLocation).toString().replace("file://", ""), "~") : "Music/" + appName
     function pollRecording() {
         const rec = mixer.recording();
         if (rec === recordingJson) return;
@@ -365,7 +396,7 @@ ApplicationWindow {
             if (now === was) continue;
             if (now[0] === "!") flash("Can't record " + label + ": " + now.slice(1));
             else if (now !== "" && was === "") flash("Recording " + label + " to " + now);
-            else if (now === "" && was !== "" && was[0] !== "!") flash("Saved the " + label + " recording in Music/Vox Pro");
+            else if (now === "" && was !== "" && was[0] !== "!") flash("Saved the " + label + " recording in " + recordFolder);
         }
         recordingSince = since;
     }
@@ -376,7 +407,7 @@ ApplicationWindow {
         const t = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, sec = t % 60;
         return (h > 0 ? h + ":" : "") + String(m).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
     }
-    // Developer aid: `vox-pro --rec 5` starts recording output 5 (B1) after a moment, for engine tests.
+    // Developer aid: `--rec 3` starts recording output 3 after a moment after a moment, for engine tests.
     Timer {
         readonly property int flag: Qt.application.arguments.indexOf("--rec")
         interval: 3000
@@ -523,7 +554,15 @@ ApplicationWindow {
                 if (from) Object.assign(b, plain(from), { label: b.label, name: b.name || "", virtual_output: b.virtual_output });
             }
         });
+        if (prefs.last_scene !== scene.name) setPref(p => p.last_scene = scene.name);
         flash("Scene: " + scene.name);
+    }
+    // The scene after the one in use (or the last one loaded), for the Next scene shortcut.
+    function nextScene() {
+        if (scenes.length === 0) { flash("No scenes yet"); return; }
+        let at = scenes.findIndex((sc, i) => sceneActive(i));
+        if (at < 0) at = scenes.findIndex(sc => sc.name === prefs.last_scene);
+        applyScene((at + 1) % scenes.length);
     }
     function flash(text) { status = text; statusTimer.restart(); }
 
@@ -531,10 +570,15 @@ ApplicationWindow {
     readonly property bool shortcutsOk: mixer.shortcutsAvailable()
     property int pttKey: mixer.shortcutKey("ptt")
     property int muteKey: mixer.shortcutKey("mute-mics")
+    property int sceneKey: mixer.shortcutKey("next-scene")
+    property int windowKey: mixer.shortcutKey("show-hide")
     function setShortcut(action, key) {
         const got = mixer.setShortcutKey(action, key);
         if (got < 0) { flash("That key is already used by another shortcut."); return; }
-        if (action === "ptt") pttKey = got; else muteKey = got;
+        if (action === "ptt") pttKey = got;
+        else if (action === "mute-mics") muteKey = got;
+        else if (action === "next-scene") sceneKey = got;
+        else windowKey = got;
     }
     // "Ctrl+Alt+F12" from a Qt key code.
     function keyText(code) {
@@ -561,10 +605,23 @@ ApplicationWindow {
                 if (e === "mute-mics") {
                     muteMics(!micsMuted);
                     flash(micsMuted ? "Microphones muted" : "Microphones live");
+                } else if (e === "next-scene") {
+                    nextScene();
+                } else if (e === "show-hide") {
+                    toggleWindow();
+                } else if (e === "screen-locked" && prefs.lock_mute && !micsMuted) {
+                    // Settings > Mute mics when the screen locks; they come back on unlock.
+                    muteMics(true);
+                    lockMuted = true;
+                } else if (e === "screen-unlocked" && lockMuted) {
+                    muteMics(false);
+                    lockMuted = false;
                 }
             }
         }
     }
+
+    property bool lockMuted: false
 
     // ---- Tray icon: show/hide, mute, scenes, quit ----
     readonly property bool trayOn: trayLoader.item ? trayLoader.item.available : false
@@ -929,7 +986,7 @@ ApplicationWindow {
                                         y: 2
                                         x: show.on ? 11 : 2
                                         color: show.on ? "#ffffff" : win.faint
-                                        Behavior on x { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                                        Behavior on x { enabled: win.anim; NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
                                     }
                                 }
                             }

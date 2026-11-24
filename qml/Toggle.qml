@@ -33,7 +33,7 @@ Rectangle {
         y: 3
         x: sw.checked ? parent.width - width - 3 : 3
         color: sw.checked ? "#ffffff" : sw.app.dim
-        Behavior on x { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+        Behavior on x { enabled: sw.app.anim !== false; NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
     }
     MouseArea {
         id: mouse

@@ -1,7 +1,7 @@
 //! Parametric EQ: six cells in series, each a biquad (RBJ cookbook) with its own type, frequency, gain and Q.
 //! The same file is used by Vox Obscurus and Vox Pro. qml/PeqEditor.qml draws the curve with the same formulas.
 
-use crate::dsp::SAMPLE_RATE;
+use crate::dsp::sample_rate;
 use serde::{Deserialize, Serialize};
 
 pub const CELLS: usize = 6;
@@ -75,7 +75,7 @@ fn coefs(cell: &Cell) -> Coefs {
         return FLAT;
     }
     let a = 10f64.powf(cell.db as f64 / 40.0);
-    let w0 = 2.0 * std::f64::consts::PI * (cell.hz as f64).clamp(20.0, SAMPLE_RATE as f64 * 0.45) / SAMPLE_RATE as f64;
+    let w0 = 2.0 * std::f64::consts::PI * (cell.hz as f64).clamp(20.0, sample_rate() as f64 * 0.45) / sample_rate() as f64;
     let (sin, cos) = w0.sin_cos();
     let alpha = sin / (2.0 * (cell.q as f64).max(0.1));
     let k = 2.0 * a.sqrt() * alpha;
@@ -184,10 +184,10 @@ mod tests {
     fn measured_db(cells: &[Cell], hz: f32) -> f32 {
         let mut eq = Peq::default();
         eq.set(true, cells, 0.0);
-        let n = SAMPLE_RATE as usize;
+        let n = sample_rate() as usize;
         let mut sum = 0.0f64;
         for i in 0..n {
-            let x = 0.1 * (2.0 * std::f32::consts::PI * hz * i as f32 / SAMPLE_RATE).sin();
+            let x = 0.1 * (2.0 * std::f32::consts::PI * hz * i as f32 / sample_rate()).sin();
             let y = eq.process([x, x])[0];
             if i >= n / 2 {
                 sum += (y as f64).powi(2);
@@ -255,7 +255,7 @@ mod tests {
         let first = eq.process([0.5, 0.5])[0];
         assert!(first > 0.5 && first < 0.51, "jumped straight to {first}");
         let mut last = 0.0;
-        for _ in 0..SAMPLE_RATE as usize / 4 {
+        for _ in 0..sample_rate() as usize / 4 {
             last = eq.process([0.5, -0.5])[0];
         }
         assert!((last - 0.5 * 10f32.powf(6.0 / 20.0)).abs() < 1e-3, "{last}");
@@ -263,10 +263,10 @@ mod tests {
         let cells = one("peak", 1000.0, 6.0, 1.0);
         let mut eq = Peq::default();
         eq.set(true, &cells, -6.0);
-        let n = SAMPLE_RATE as usize;
+        let n = sample_rate() as usize;
         let mut sum = 0.0f64;
         for i in 0..n {
-            let x = 0.1 * (2.0 * std::f32::consts::PI * 1000.0 * i as f32 / SAMPLE_RATE).sin();
+            let x = 0.1 * (2.0 * std::f32::consts::PI * 1000.0 * i as f32 / sample_rate()).sin();
             let y = eq.process([x, x])[0];
             if i >= n / 2 {
                 sum += (y as f64).powi(2);

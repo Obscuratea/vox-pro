@@ -195,6 +195,103 @@ impl Default for Ui {
     }
 }
 
+/// Preferences from the Settings page that aren't about the mixer itself.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Prefs {
+    // Layout
+    /// Smaller windows slim the strips down on their own; off keeps full strips and scrolls instead.
+    pub fit_detail: bool,
+    /// Clicking a strip opens the inspector when it is closed.
+    pub inspector_on_select: bool,
+    // Appearance
+    /// Glass themes ask KWin to blur what is behind the window.
+    pub blur: bool,
+    /// Use the desktop's accent colour instead of the theme's.
+    pub system_accent: bool,
+    /// "gradient", "segments" or "solid".
+    pub meter_style: String,
+    /// A tick stays at the loudest recent level on each meter.
+    pub peak_hold: bool,
+    pub animations: bool,
+    // Behaviour
+    /// Start with the computer (an entry in ~/.config/autostart).
+    pub autostart: bool,
+    /// Start in the tray, without the window.
+    pub start_hidden: bool,
+    /// Load the last scene used when Vox starts.
+    pub restore_scene: bool,
+    pub last_scene: String,
+    /// Ask before a channel is removed.
+    pub confirm_remove: bool,
+    // Audio
+    /// The rate Vox runs at and asks PipeWire for (44100, 48000 or 96000). Used from the next start.
+    pub sample_rate: u32,
+    /// "low", "balanced" or "safe": the buffer Vox asks PipeWire for.
+    pub latency: String,
+    /// Keep the first B mic as the system microphone / the first virtual input as the system output.
+    pub default_mic: bool,
+    pub default_output: bool,
+    /// Mute the B mics while the screen is locked.
+    pub lock_mute: bool,
+    // Recording
+    /// Where recordings go; empty for ~/Music/<app name>.
+    pub record_dir: String,
+    /// The tray icon gets a red dot while something records.
+    pub tray_rec_dot: bool,
+}
+
+impl Default for Prefs {
+    fn default() -> Self {
+        Self {
+            fit_detail: true,
+            inspector_on_select: true,
+            blur: true,
+            system_accent: false,
+            meter_style: "gradient".into(),
+            peak_hold: true,
+            animations: true,
+            autostart: false,
+            start_hidden: false,
+            restore_scene: false,
+            last_scene: String::new(),
+            confirm_remove: true,
+            sample_rate: 48_000,
+            latency: "balanced".into(),
+            default_mic: false,
+            default_output: false,
+            lock_mute: false,
+            record_dir: String::new(),
+            tray_rec_dot: true,
+        }
+    }
+}
+
+impl Prefs {
+    fn sanitized(mut self) -> Self {
+        if !matches!(self.meter_style.as_str(), "gradient" | "segments" | "solid") {
+            self.meter_style = "gradient".into();
+        }
+        if !matches!(self.sample_rate, 44_100 | 48_000 | 96_000) {
+            self.sample_rate = 48_000;
+        }
+        if !matches!(self.latency.as_str(), "low" | "balanced" | "safe") {
+            self.latency = "balanced".into();
+        }
+        self
+    }
+
+    /// Frames per PipeWire cycle Vox asks for.
+    pub fn quantum(&self) -> u32 {
+        let at_48k = match self.latency.as_str() {
+            "low" => 128,
+            "safe" => 1024,
+            _ => 256,
+        };
+        (at_48k as u64 * self.sample_rate as u64 / 48_000).next_power_of_two() as u32
+    }
+}
+
 /// The longest name a strip or output can be given.
 pub const NAME_LEN: usize = 18;
 
@@ -235,6 +332,8 @@ pub struct Settings {
     pub close_to_tray: bool,
     #[serde(default)]
     pub ui: Ui,
+    #[serde(default)]
+    pub prefs: Prefs,
 }
 
 fn yes() -> bool {
@@ -286,6 +385,7 @@ impl Default for Settings {
             check_updates: true,
             close_to_tray: false,
             ui: Ui::default(),
+            prefs: Prefs::default(),
         }
     }
 }
@@ -401,6 +501,7 @@ impl Settings {
         if !matches!(s.record_format.as_str(), "wav" | "flac" | "opus") {
             s.record_format = default_format();
         }
+        s.prefs = s.prefs.sanitized();
         s.scenes.truncate(MAX_SCENES);
         for scene in s.scenes.iter_mut() {
             for strip in scene.strips.iter_mut() {
@@ -478,7 +579,10 @@ mod tests {
         old.strips[0].source = "quadcast".into();
         old.strips[0].gain_db = -6.0;
         old.buses[6].limiter_on = true;
-        let json = old.to_json().replace(r#""name":"","#, "").replace(r#","ui":{"show_inputs":true,"show_virtual":true,"show_outputs":true,"compact":false,"inspector":true}"#, "");
+        let mut value: serde_json::Value = serde_json::from_str(&old.to_json().replace(r#""name":"","#, "")).unwrap();
+        value.as_object_mut().unwrap().remove("ui");
+        value.as_object_mut().unwrap().remove("prefs");
+        let json = value.to_string();
         assert!(!json.contains("\"ui\""));
         let s = Settings::from_json(&json).expect("0.2 save loads");
         assert_eq!((s.strips.len(), s.buses.len()), (8, 8));

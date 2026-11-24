@@ -2,11 +2,11 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls.Basic
 
-// The parametric EQ page: pick an output (in Vox Pro, an input too) along the top, shape its curve underneath.
+// The parametric EQ page: pick an input or output along the top, shape its curve underneath.
 Item {
     id: view
     required property var app
-    readonly property var picks: (app.pro ? app.hwIdx.concat(app.virtIdx).map(i => ({ kind: "strip", index: i })) : [])
+    readonly property var picks: app.hwIdx.concat(app.virtIdx).map(i => ({ kind: "strip", index: i }))
         .concat(app.aIdx.concat(app.bIdx).map(i => ({ kind: "bus", index: i })))
 
     ColumnLayout {
@@ -30,7 +30,7 @@ Item {
                         required property var modelData
                         readonly property string name: view.app.nameOf(modelData.kind, modelData.index)
                         app: view.app
-                        text: view.app.tagOf(modelData.kind, modelData.index) + (view.width >= (view.app.pro ? 1300 : 700) ? "  " + name : "")
+                        text: view.app.tagOf(modelData.kind, modelData.index) + (view.width >= 1300 ? "  " + name : "")
                         checked: view.app.eqKind === modelData.kind && view.app.eqIndex === modelData.index
                         tip: name
                         onToggled: view.app.openEq(modelData.kind, modelData.index)

@@ -5,7 +5,16 @@ use crate::peq::{Cell, Peq};
 use crate::stretch::{self, SoundTouch};
 use std::collections::VecDeque;
 
-pub const SAMPLE_RATE: f32 = 48_000.0;
+static RATE: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(48_000);
+
+/// The rate Vox runs at. Set once at start from the settings, before any audio runs.
+pub fn sample_rate() -> f32 {
+    RATE.load(std::sync::atomic::Ordering::Relaxed) as f32
+}
+
+pub fn set_sample_rate(hz: u32) {
+    RATE.store(hz, std::sync::atomic::Ordering::Relaxed);
+}
 
 const BASS_HZ: f32 = 150.0;
 const BRIGHTNESS_HZ: f32 = 4_500.0;
@@ -40,7 +49,7 @@ impl Shelf {
             return;
         }
         let a = 10f32.powf(gain_db / 40.0);
-        let w0 = 2.0 * std::f32::consts::PI * freq / SAMPLE_RATE;
+        let w0 = 2.0 * std::f32::consts::PI * freq / sample_rate();
         let (sin, cos) = w0.sin_cos();
         let alpha = sin / 2.0 * std::f32::consts::SQRT_2;
         let k = 2.0 * a.sqrt() * alpha;
@@ -100,13 +109,13 @@ impl Default for Gate {
             env_decay: coef(0.05),
             attack: coef(0.002),
             release: coef(0.08),
-            hold_frames: (0.1 * SAMPLE_RATE) as u32,
+            hold_frames: (0.1 * sample_rate()) as u32,
         }
     }
 }
 
 fn coef(seconds: f32) -> f32 {
-    (-1.0 / (seconds * SAMPLE_RATE)).exp()
+    (-1.0 / (seconds * sample_rate())).exp()
 }
 
 impl Gate {
@@ -219,7 +228,7 @@ impl PitchStage {
             self.primed = false;
             return;
         }
-        let engine = self.engine.get_or_insert_with(|| SoundTouch::new(SAMPLE_RATE as u32));
+        let engine = self.engine.get_or_insert_with(|| SoundTouch::new(sample_rate() as u32));
         engine.set_semitones(semitones as f64);
     }
 
@@ -339,7 +348,7 @@ mod tests {
     /// The strongest frequency between 50 and 1000 Hz, to the nearest Hz (Goertzel per bin).
     fn frequency(samples: &[f32]) -> f32 {
         let power = |freq: f32| {
-            let coeff = 2.0 * (2.0 * std::f32::consts::PI * freq / SAMPLE_RATE).cos();
+            let coeff = 2.0 * (2.0 * std::f32::consts::PI * freq / sample_rate()).cos();
             let (mut s1, mut s2) = (0.0f32, 0.0f32);
             for &x in samples {
                 let s0 = x + coeff * s1 - s2;
@@ -365,14 +374,14 @@ mod tests {
     }
 
     fn sine(hz: f32) -> impl Fn(usize) -> f32 {
-        move |n| (2.0 * std::f32::consts::PI * hz * n as f32 / SAMPLE_RATE).sin() * 0.5
+        move |n| (2.0 * std::f32::consts::PI * hz * n as f32 / sample_rate()).sin() * 0.5
     }
 
     #[test]
     fn pitch_moves_by_octaves() {
         for (semitones, expected) in [(12.0, 440.0), (-12.0, 110.0), (5.0, 293.7)] {
-            let out = run(semitones, sine(220.0), SAMPLE_RATE as usize * 2);
-            let got = frequency(&out[SAMPLE_RATE as usize..]);
+            let out = run(semitones, sine(220.0), sample_rate() as usize * 2);
+            let got = frequency(&out[sample_rate() as usize..]);
             assert!((got - expected).abs() <= 3.0, "{semitones} st gave {got}, wanted {expected}");
         }
     }
@@ -380,8 +389,8 @@ mod tests {
     #[test]
     fn pitch_never_runs_dry() {
         // Once audio is flowing there must be no silent gaps from the stage running out.
-        let out = run(3.5, sine(180.0), SAMPLE_RATE as usize * 3);
-        let steady = &out[SAMPLE_RATE as usize..];
+        let out = run(3.5, sine(180.0), sample_rate() as usize * 3);
+        let steady = &out[sample_rate() as usize..];
         let silent = steady.chunks(48).filter(|c| c.iter().all(|v| v.abs() < 1e-4)).count();
         assert_eq!(silent, 0, "{silent} silent 1 ms chunks in the shifted voice");
     }
@@ -403,8 +412,8 @@ mod tests {
                 let mut stage = PitchStage::default();
                 stage.set_semitones(semitones);
                 let mut seed = 1u32;
-                let cycles = SAMPLE_RATE as usize * 90 / n;
-                let settle = SAMPLE_RATE as usize * 20 / n;
+                let cycles = sample_rate() as usize * 90 / n;
+                let settle = sample_rate() as usize * 20 / n;
                 let mut late_gaps = 0;
                 for cycle in 0..cycles {
                     let mut block: Vec<[f32; 2]> = (0..n)
@@ -437,7 +446,7 @@ mod pro_tests {
     fn tone(amp: f32, hz: f32, frames: usize) -> Vec<[f32; 2]> {
         (0..frames)
             .map(|i| {
-                let x = amp * (2.0 * std::f32::consts::PI * hz * i as f32 / SAMPLE_RATE).sin();
+                let x = amp * (2.0 * std::f32::consts::PI * hz * i as f32 / sample_rate()).sin();
                 [x, x]
             })
             .collect()

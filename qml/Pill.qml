@@ -6,7 +6,7 @@ import QtQuick.Controls.Basic
 //   "pill"  GATE / DUCK / EQ: sunken, an accent line along the bottom when on
 //   "send"  A1, B1...: a hairline outline, filled with the A or B colour when on
 //   "mute", "solo"  M and S: the bigger footer buttons, red or amber when on
-//   "rec"   the record dot on an output (Vox Pro): a red dot, the whole button red while recording
+//   "rec"   the record dot on an output: a red dot, the whole button red while recording
 Rectangle {
     id: pill
     required property var app

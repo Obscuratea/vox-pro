@@ -21,7 +21,7 @@ Card {
 
     MouseArea {
         anchors.fill: parent
-        onClicked: row.app.selectChannel(row.kind, row.slot, true)
+        onClicked: row.app.pickChannel(row.kind, row.slot)
     }
 
     ColumnLayout {
@@ -46,7 +46,7 @@ Card {
                     anchors.leftMargin: -60
                     anchors.margins: -6
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: row.app.selectChannel(row.kind, row.slot, true)
+                    onClicked: row.app.pickChannel(row.kind, row.slot)
                 }
             }
             Text {

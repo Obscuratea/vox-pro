@@ -183,7 +183,7 @@ Rectangle {
                     color: current ? editor.app.accent : editor.app.bg
                     border.width: 2
                     border.color: editor.app.accent
-                    Behavior on width { NumberAnimation { duration: 90 } }
+                    Behavior on width { enabled: editor.app.anim !== false; NumberAnimation { duration: 90 } }
                     Text {
                         anchors.centerIn: parent
                         text: node.index + 1

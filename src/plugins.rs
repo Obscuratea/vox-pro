@@ -9,7 +9,7 @@
 //! Plugins are other people's code running inside Vox. If one crashes while it loads, the next start
 //! comes up with plugins switched off (see `safe_mode`) instead of crashing again.
 
-use crate::dsp::SAMPLE_RATE;
+use crate::dsp::sample_rate;
 use livi::event::LV2AtomSequence;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -490,10 +490,10 @@ impl World {
 
     fn info(&self, uri: &str) -> String {
         if uri.starts_with("clap:") {
-            return crate::plug_clap::info(uri, SAMPLE_RATE as f64, MAX_BLOCK).unwrap_or_default();
+            return crate::plug_clap::info(uri, sample_rate() as f64, MAX_BLOCK).unwrap_or_default();
         }
         if uri.starts_with("vst3:") {
-            return crate::plug_vst3::info(uri, SAMPLE_RATE as f64, MAX_BLOCK).unwrap_or_default();
+            return crate::plug_vst3::info(uri, sample_rate() as f64, MAX_BLOCK).unwrap_or_default();
         }
         let Some(plugin) = self.world.plugin_by_uri(uri) else { return String::new() };
         let w = self.world.raw();
@@ -559,19 +559,19 @@ impl World {
                 seq_out: Vec::new(),
             };
             if slot.uri.starts_with("clap:") {
-                unit.ext = crate::plug_clap::Unit::load(&slot.uri, SAMPLE_RATE as f64, MAX_BLOCK).map(Ext::Clap);
+                unit.ext = crate::plug_clap::Unit::load(&slot.uri, sample_rate() as f64, MAX_BLOCK).map(Ext::Clap);
                 if unit.ext.is_none() {
                     eprintln!("vox-pro: could not load plugin {}", slot.uri);
                 }
             } else if slot.uri.starts_with("vst3:") {
-                unit.ext = crate::plug_vst3::Unit::load(&slot.uri, SAMPLE_RATE as f64, MAX_BLOCK).map(Ext::Vst3);
+                unit.ext = crate::plug_vst3::Unit::load(&slot.uri, sample_rate() as f64, MAX_BLOCK).map(Ext::Vst3);
                 if unit.ext.is_none() {
                     eprintln!("vox-pro: could not load plugin {}", slot.uri);
                 }
             } else if let Some((plugin, stereo)) = self.world.plugin_by_uri(&slot.uri).and_then(|p| Some((Self::usable(&p)?, p)).map(|(s, p)| (p, s))) {
                 let counts = *plugin.port_counts();
                 for _ in 0..if stereo { 1 } else { 2 } {
-                    match unsafe { plugin.instantiate(self.features.clone(), SAMPLE_RATE as f64) } {
+                    match unsafe { plugin.instantiate(self.features.clone(), sample_rate() as f64) } {
                         Ok(instance) => {
                             unit.instances.push(instance);
                             let seqs = |n: usize| (0..n).map(|_| LV2AtomSequence::new(&self.features, 32_768)).collect::<Vec<_>>();

@@ -73,6 +73,23 @@ Flickable {
         }
     }
 
+    // An option that is one on/off preference (settings.rs Prefs), on unless set off when `fallback` is true.
+    component PrefOpt: Opt {
+        id: prefOpt
+        property string key
+        property bool fallback: false
+        property bool usable: true
+        signal switched(bool on)
+        readonly property bool on: { const v = app.prefs[key]; return v === undefined ? fallback : !!v; }
+        Toggle {
+            app: prefOpt.app
+            enabled: prefOpt.usable
+            opacity: enabled ? 1 : 0.45
+            checked: prefOpt.on
+            onToggled: { const k = prefOpt.key, now = !prefOpt.on; prefOpt.app.setPref(p => p[k] = now); prefOpt.switched(now); }
+        }
+    }
+
     // Choose one of a few: a sunken bar with the chosen one raised.
     component Seg: Rectangle {
         id: seg
@@ -327,7 +344,10 @@ Flickable {
                                 removeTip: canRemove ? "Remove " + layoutCard.app.tagOf(groupRow.kind, groupRow.last) + " · " + layoutCard.app.nameOf(groupRow.kind, groupRow.last)
                                                      : "The last one always stays"
                                 onAdd: { layoutCard.asking = ""; layoutCard.app.addChannel(groupRow.group); }
-                                onRemove: layoutCard.asking = groupRow.group
+                                onRemove: {
+                                    if (layoutCard.app.prefs.confirm_remove === false) layoutCard.app.removeChannel(groupRow.kind, groupRow.last);
+                                    else layoutCard.asking = groupRow.group;
+                                }
                             }
                         }
                         Confirm {
@@ -361,6 +381,8 @@ Flickable {
                         }
                     }
                 }
+                PrefOpt { key: "fit_detail"; fallback: true; title: "Fit detail to window size"; note: "Narrow windows slim the strips down instead of scrolling" }
+                PrefOpt { key: "inspector_on_select"; fallback: true; title: "Open the inspector on select"; note: "Clicking a strip opens its details" }
             }
 
             // ---- Appearance ----
@@ -463,6 +485,23 @@ Flickable {
                     Item { Layout.fillWidth: true }
                     Lnk { text: scroller.app.cfg.bg_image ? "Change" : "Choose"; tip: "Pick a picture"; onClicked: picker.open() }
                 }
+                PrefOpt {
+                    key: "blur"; fallback: true
+                    title: "Blur what is behind the window"
+                    note: scroller.app.glassy ? "Glass theme, needs KWin blur" : "Only the Glass theme is see-through"
+                    usable: scroller.app.glassy
+                }
+                PrefOpt { key: "system_accent"; title: "Follow the system accent colour"; note: "Instead of the theme's own" }
+                Opt {
+                    title: "Meters"
+                    Seg {
+                        options: ["Gradient", "Segments", "Solid"]
+                        current: Math.max(0, ["gradient", "segments", "solid"].indexOf(scroller.app.prefs.meter_style || "gradient"))
+                        onPicked: i => scroller.app.setPref(p => p.meter_style = ["gradient", "segments", "solid"][i])
+                    }
+                }
+                PrefOpt { key: "peak_hold"; fallback: true; title: "Peak hold"; note: "Meters keep the loudest point for a moment" }
+                PrefOpt { key: "animations"; fallback: true; title: "Animations" }
             }
 
             // ---- Scenes ----
@@ -584,6 +623,29 @@ Flickable {
                         onClicked: scroller.app.setShortcut("mute-mics", 0)
                     }
                 }
+                Opt {
+                    visible: scroller.app.shortcutsOk
+                    title: "Next scene"
+                    note: scroller.app.scenes.length === 0 ? "Save a scene first" : "Goes round the saved scenes"
+                    KeyCapture { app: scroller.app; key: scroller.app.sceneKey; onCaptured: k => scroller.app.setShortcut("next-scene", k) }
+                    TextButton {
+                        visible: scroller.app.sceneKey !== 0
+                        app: scroller.app; implicitHeight: 28; implicitWidth: 32; text: "✕"
+                        tip: "Clear the key"
+                        onClicked: scroller.app.setShortcut("next-scene", 0)
+                    }
+                }
+                Opt {
+                    visible: scroller.app.shortcutsOk
+                    title: "Show or hide " + (scroller.app.pro ? "Vox Pro" : "Vox")
+                    KeyCapture { app: scroller.app; key: scroller.app.windowKey; onCaptured: k => scroller.app.setShortcut("show-hide", k) }
+                    TextButton {
+                        visible: scroller.app.windowKey !== 0
+                        app: scroller.app; implicitHeight: 28; implicitWidth: 32; text: "✕"
+                        tip: "Clear the key"
+                        onClicked: scroller.app.setShortcut("show-hide", 0)
+                    }
+                }
             }
 
             // ---- Behaviour ----
@@ -594,6 +656,7 @@ Flickable {
                 height: implicitHeight
                 onHeightChanged: Qt.callLater(grid.relayout)
 
+                PrefOpt { key: "autostart"; title: "Start with the computer"; note: "When you log in" }
                 Opt {
                     title: "Keep running in the tray"
                     note: scroller.app.trayOn ? "Closing the window only hides it" : "No system tray found"
@@ -604,6 +667,13 @@ Flickable {
                         onToggled: scroller.app.change(c => c.close_to_tray = !c.close_to_tray)
                     }
                 }
+                PrefOpt {
+                    key: "start_hidden"
+                    title: "Start hidden"
+                    note: scroller.app.trayOn ? "Only the tray icon at start" : "Needs a system tray"
+                    usable: scroller.app.trayOn
+                }
+                PrefOpt { key: "restore_scene"; title: "Restore the last scene"; note: "Load the scene you used last at start" }
                 Opt {
                     title: "Check for updates"
                     note: "Once at launch"
@@ -613,74 +683,77 @@ Flickable {
                         onToggled: scroller.app.change(c => c.check_updates = !(c.check_updates !== false))
                     }
                 }
+                PrefOpt { key: "confirm_remove"; fallback: true; title: "Confirm before removing a channel" }
             }
 
             // ---- Audio ----
             SetCard {
+                id: audioCard
                 app: scroller.app
                 title: "Audio"
                 icon: "wave"
                 height: implicitHeight
                 onHeightChanged: Qt.callLater(grid.relayout)
+                readonly property var rates: [44100, 48000, 96000]
+                readonly property var latencies: ["low", "balanced", "safe"]
+                readonly property int rate: scroller.app.prefs.sample_rate || 48000
+                readonly property string latency: scroller.app.prefs.latency || "balanced"
+                // Both only take effect at the next start: the engine is built for them.
+                readonly property bool rateWaits: rate !== scroller.app.bootPrefs.rate
+                readonly property bool latencyWaits: latency !== scroller.app.bootPrefs.latency
+                readonly property var outs: scroller.app.aIdx.concat(scroller.app.bIdx)
+                readonly property bool allLimited: outs.length > 0 && outs.every(i => !!(scroller.app.cfg.buses[i] || {}).limiter_on)
+                readonly property string firstMic: scroller.app.bIdx.length > 0 ? scroller.app.tagOf("bus", scroller.app.bIdx[0]) : "B1"
+                readonly property string firstVirt: scroller.app.virtIdx.length > 0 ? scroller.app.nameOf("strip", scroller.app.virtIdx[0]) : "Apps"
 
                 Opt {
                     title: "Sample rate"
-                    note: "Vox runs at the rate PipeWire mixes at"
-                    Cap { text: (scroller.app.usage.rate || 48000) / 1000 + " kHz" }
-                }
-                Opt {
-                    title: "Delay"
-                    note: "One PipeWire cycle. PipeWire sets it from what is playing."
-                    Cap { text: scroller.app.usage.cycle > 0 ? scroller.app.usage.cycle.toFixed(1) + " ms" : "—" }
-                }
-                Opt {
-                    title: "System output"
-                    note: "Programs that play on the default output land on this virtual input"
-                }
-                Flow {
-                    Layout.fillWidth: true
-                    Layout.bottomMargin: 10
-                    spacing: 6
-                    Repeater {
-                        model: scroller.app.virtIdx
-                        TextButton {
-                            required property int modelData
-                            app: scroller.app
-                            implicitHeight: 28
-                            text: scroller.app.nameOf("strip", modelData)
-                            tip: "Make " + scroller.app.appName + " " + scroller.app.cfg.strips[modelData].label + " the system output"
-                            onClicked: scroller.app.makeDefault(scroller.app.nodePrefix + scroller.app.slug(scroller.app.cfg.strips[modelData].label),
-                                                                "System output is now " + scroller.app.nameOf("strip", modelData) + ".")
-                        }
+                    note: audioCard.rateWaits ? "Used from the next start" : "Vox asks PipeWire for this rate"
+                    noteColor: audioCard.rateWaits ? scroller.app.warning : scroller.app.faint
+                    Seg {
+                        options: ["44.1k", "48k", "96k"]
+                        current: Math.max(0, audioCard.rates.indexOf(audioCard.rate))
+                        onPicked: i => scroller.app.setPref(p => p.sample_rate = [44100, 48000, 96000][i])
                     }
                 }
                 Opt {
-                    title: "System microphone"
-                    note: "Programs that use the default microphone hear this virtual mic"
-                }
-                Flow {
-                    Layout.fillWidth: true
-                    Layout.bottomMargin: 10
-                    spacing: 6
-                    Repeater {
-                        model: scroller.app.bIdx
-                        TextButton {
-                            required property int modelData
-                            app: scroller.app
-                            implicitHeight: 28
-                            text: scroller.app.tagOf("bus", modelData)
-                            tip: "Make " + scroller.app.tagOf("bus", modelData) + " the system microphone"
-                            onClicked: scroller.app.makeDefault(scroller.app.nodePrefix + scroller.app.slug(scroller.app.cfg.buses[modelData].label),
-                                                                "System microphone is now " + scroller.app.tagOf("bus", modelData) + ".")
-                        }
+                    title: "Latency"
+                    note: audioCard.latencyWaits ? "Used from the next start"
+                        : "Lower is faster but heavier" + (scroller.app.usage.cycle > 0 ? " · now " + scroller.app.usage.cycle.toFixed(1) + " ms" : "")
+                    noteColor: audioCard.latencyWaits ? scroller.app.warning : scroller.app.faint
+                    Seg {
+                        options: ["Low", "Balanced", "Safe"]
+                        current: Math.max(0, audioCard.latencies.indexOf(audioCard.latency))
+                        onPicked: i => scroller.app.setPref(p => p.latency = ["low", "balanced", "safe"][i])
                     }
                 }
+                PrefOpt {
+                    key: "default_mic"
+                    title: "Use " + audioCard.firstMic + " as the system microphone"
+                    note: "Programs with \"default mic\" hear " + audioCard.firstMic
+                    onSwitched: on => { if (on) scroller.app.claimDefaults(false); }
+                }
+                PrefOpt {
+                    key: "default_output"
+                    title: "Use " + audioCard.firstVirt + " as the system output"
+                    note: "Programs that play on the default output land here"
+                    onSwitched: on => { if (on) scroller.app.claimDefaults(false); }
+                }
+                Opt {
+                    title: "Limiter on every output"
+                    note: "Nothing leaves louder than the ceiling"
+                    Toggle {
+                        app: scroller.app
+                        checked: audioCard.allLimited
+                        onToggled: { const on = !audioCard.allLimited; scroller.app.change(c => { for (const b of c.buses) b.limiter_on = on; }); }
+                    }
+                }
+                PrefOpt { key: "lock_mute"; title: "Mute mics when the screen locks"; note: "They come back when you unlock" }
             }
 
-            // ---- Vox Pro: recording ----
+            // ---- Recording ----
             SetCard {
                 id: recCard
-                visible: scroller.app.pro
                 app: scroller.app
                 title: "Recording"
                 icon: "rec"
@@ -702,11 +775,24 @@ Flickable {
                         onPicked: i => scroller.app.change(c => c.record_format = ["flac", "wav", "opus"][i])
                     }
                 }
-                Opt {
-                    title: "Saved in"
-                    note: "One file per output, named by the time it started"
-                    Lnk { text: "Music/" + scroller.app.appName; onClicked: scroller.app.openRecordings() }
+                FolderDialog {
+                    id: folderPicker
+                    title: "Where recordings go"
+                    onAccepted: scroller.app.setPref(p => p.record_dir = decodeURIComponent(selectedFolder.toString().replace("file://", "")))
                 }
+                Opt {
+                    title: "Folder"
+                    note: scroller.app.recordFolder
+                    Lnk { text: "Open"; tip: "Open the folder"; onClicked: scroller.app.openRecordings() }
+                    Lnk { text: "Change"; onClicked: folderPicker.open() }
+                }
+                Opt {
+                    visible: !!scroller.app.prefs.record_dir
+                    title: "Back to the default folder"
+                    note: "Music/" + scroller.app.appName
+                    Lnk { text: "Reset"; onClicked: scroller.app.setPref(p => p.record_dir = "") }
+                }
+                PrefOpt { key: "tray_rec_dot"; fallback: true; title: "Show a red dot in the tray"; note: "While something records" }
             }
 
             // ---- Vox Pro: plugins ----

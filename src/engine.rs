@@ -10,7 +10,7 @@
 //! and each bus reads from them, which costs at most one graph cycle of delay.
 
 use crate::recorder::{Format, Recorder};
-use crate::dsp::{CompParams, SAMPLE_RATE, Voice, db_to_lin};
+use crate::dsp::{CompParams, sample_rate, Voice, db_to_lin};
 use crate::plugins::{self, Chain, Slot, Target};
 use crate::settings::{MAX_BUSES, MAX_STRIPS, Settings, slug};
 use pipewire as pw;
@@ -57,7 +57,7 @@ const STRIDE: usize = 2 * std::mem::size_of::<f32>();
 
 /// Per-sample step toward a new gain, about 10 ms to settle, so faders and mutes don't click.
 fn smoothing() -> f32 {
-    1.0 - (-1.0 / (0.01 * SAMPLE_RATE)).exp()
+    1.0 - (-1.0 / (0.01 * sample_rate())).exp()
 }
 
 #[derive(Clone, Debug, serde::Serialize)]
@@ -144,7 +144,13 @@ pub struct Handle {
     pub sender: Mutex<pw::channel::Sender<Command>>,
 }
 
+/// Frames per cycle Vox asks PipeWire for (the Latency setting), fixed at start like the rate.
+static QUANTUM: AtomicU32 = AtomicU32::new(256);
+
 pub fn start(settings: Settings) -> Handle {
+    // The rate and buffer are only read here: the streams and every filter are built for them.
+    crate::dsp::set_sample_rate(settings.prefs.sample_rate);
+    QUANTUM.store(settings.prefs.quantum(), Ordering::Relaxed);
     let shared = Arc::new(Shared::new());
     let (sender, receiver) = pw::channel::channel();
     let thread_shared = shared.clone();
@@ -301,7 +307,7 @@ impl Mixer {
             return;
         }
         let status = if on && self.recorders[bus].is_none() {
-            match Recorder::start(&self.settings.buses[bus].label, SAMPLE_RATE as u32, Format::parse(&self.settings.record_format)) {
+            match Recorder::start(&self.settings.prefs.record_dir, &self.settings.buses[bus].label, sample_rate() as u32, Format::parse(&self.settings.record_format)) {
                 Ok(rec) => {
                     let path = rec.path.display().to_string();
                     self.recorders[bus] = Some(rec);
@@ -440,7 +446,7 @@ impl Mixer {
         if config.duck_on && !config.virtual_input {
             let talking = peak[0].max(peak[1]) > db_to_lin(config.duck_threshold_db);
             state.duck_hold = if talking {
-                (DUCK_HOLD_SECONDS * SAMPLE_RATE) as u32
+                (DUCK_HOLD_SECONDS * sample_rate()) as u32
             } else {
                 state.duck_hold.saturating_sub(self.block.len() as u32)
             };
@@ -473,8 +479,8 @@ impl Mixer {
             .filter(|(state, c)| c.duck_on && !c.virtual_input && state.duck_hold > 0 && if listening { c.duck_a } else { c.duck_b })
             .map(|(_, c)| db_to_lin(c.duck_db))
             .fold(1.0f32, f32::min);
-        let attack = 1.0 - (-1.0 / (0.02 * SAMPLE_RATE)).exp();
-        let recover = 1.0 - (-1.0 / (0.4 * SAMPLE_RATE)).exp();
+        let attack = 1.0 - (-1.0 / (0.02 * sample_rate())).exp();
+        let recover = 1.0 - (-1.0 / (0.4 * sample_rate())).exp();
         for (s, strip) in self.strips.iter().enumerate() {
             let Some(config) = self.settings.strips.get(s) else { continue };
             if !config.routes.get(index).copied().unwrap_or(false) || (solo_active && !config.solo) {
@@ -519,7 +525,7 @@ impl Mixer {
         let step = smoothing();
         let mut peak = [0f32; 2];
         let ceiling = bus.limiter_on.then(|| db_to_lin(bus.limiter_db));
-        let release = 1.0 - (-1.0 / (0.15 * SAMPLE_RATE)).exp();
+        let release = 1.0 - (-1.0 / (0.15 * sample_rate())).exp();
         if ceiling.is_none() {
             state.limit = 1.0;
         }
@@ -586,7 +592,7 @@ struct Streams {
 fn format_param() -> Vec<u8> {
     let mut info = spa::param::audio::AudioInfoRaw::new();
     info.set_format(spa::param::audio::AudioFormat::F32LE);
-    info.set_rate(SAMPLE_RATE as u32);
+    info.set_rate(sample_rate() as u32);
     info.set_channels(2);
     let mut position = [0u32; spa::sys::SPA_AUDIO_MAX_CHANNELS as usize];
     position[0] = spa::sys::SPA_AUDIO_CHANNEL_FL;
@@ -612,6 +618,10 @@ fn stream_props(role: Role, settings: &Settings) -> Option<pw::properties::Prope
         "node.link-group" => GROUP,
         "audio.position" => "FL,FR",
     };
+    // Ask PipeWire for Vox's rate and buffer. It follows when nothing else needs another; it is never forced.
+    let rate = sample_rate() as u32;
+    props.insert("node.rate", format!("1/{rate}"));
+    props.insert("node.latency", format!("{}/{rate}", QUANTUM.load(Ordering::Relaxed)));
     let target = match role {
         Role::Strip(i) => {
             let strip = &settings.strips[i];
@@ -789,6 +799,7 @@ fn sync_devices(core: &pw::core::CoreRc, devices: &OwnDevices, settings: &Settin
     let wanted = wanted_devices(settings);
     let mut devices = devices.borrow_mut();
     devices.retain(|name, _| wanted.iter().any(|(n, _, _)| n == name));
+    let rate = (sample_rate() as u32).to_string();
     for (name, description, class) in wanted {
         if devices.contains_key(&name) {
             continue;
@@ -801,6 +812,7 @@ fn sync_devices(core: &pw::core::CoreRc, devices: &OwnDevices, settings: &Settin
                 "node.description" => description.as_str(),
                 "media.class" => class,
                 "audio.position" => "FL,FR",
+                "audio.rate" => rate.as_str(),
                 // So the system volume (on the Apps device) also turns the Apps strip down.
                 "monitor.channel-volumes" => "true",
             },
@@ -1348,7 +1360,7 @@ mod tests {
         for cycle in 0..400 {
             let mut bytes = Vec::new();
             for n in 0..256 {
-                let t = (cycle * 256 + n) as f32 / SAMPLE_RATE;
+                let t = (cycle * 256 + n) as f32 / sample_rate();
                 let x = 0.4 * (2.0 * std::f32::consts::PI * 180.0 * t).sin();
                 bytes.extend_from_slice(&x.to_le_bytes());
                 bytes.extend_from_slice(&x.to_le_bytes());
@@ -1368,7 +1380,7 @@ mod tests {
     fn tone_cycle(cycle: usize) -> Vec<u8> {
         let mut bytes = Vec::new();
         for n in 0..256 {
-            let t = (cycle * 256 + n) as f32 / SAMPLE_RATE;
+            let t = (cycle * 256 + n) as f32 / sample_rate();
             let x = 0.4 * (2.0 * std::f32::consts::PI * 180.0 * t).sin();
             bytes.extend_from_slice(&x.to_le_bytes());
             bytes.extend_from_slice(&x.to_le_bytes());

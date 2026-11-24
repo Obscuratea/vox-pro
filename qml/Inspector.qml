@@ -25,7 +25,7 @@ Rectangle {
     readonly property string node: app.nodePrefix + streamName
     readonly property var playing: app.streams.filter(s => s.target === streamName)
     readonly property var elsewhere: app.streams.filter(s => s.target === "other")
-    // Vox Pro: how far the compressor (inputs) or limiter (outputs) is turning this channel down right now, in dB.
+    // How far the compressor (inputs) or limiter (outputs) is turning this channel down right now, in dB.
     readonly property real reduction: { const m = isBus ? app.meters.limit : app.meters.comp; return m ? (m[slot] || 0) : 0; }
     readonly property var plugins: ch.plugins || []
 
@@ -361,9 +361,9 @@ Rectangle {
                     }
                 }
 
-                // ---- Parametric EQ (outputs; inputs too in Vox Pro) ----
+                // ---- Parametric EQ ----
                 Block {
-                    visible: insp.isBus || insp.app.pro
+                    visible: true
                     app: insp.app
                     title: "Parametric EQ"
                     switchable: true
@@ -399,9 +399,9 @@ Rectangle {
                     }
                 }
 
-                // ---- Vox Pro: compressor on an input ----
+                // ---- Compressor on an input ----
                 Block {
-                    visible: insp.app.pro && !insp.isBus
+                    visible: !insp.isBus
                     app: insp.app
                     title: "Compressor"
                     note: "Turns loud parts down so the level stays even"
@@ -454,9 +454,9 @@ Rectangle {
                     ReductionBar { app: insp.app; label: "Turning down"; amount: insp.reduction }
                 }
 
-                // ---- Vox Pro: limiter on an output ----
+                // ---- Limiter on an output ----
                 Block {
-                    visible: insp.app.pro && insp.isBus
+                    visible: insp.isBus
                     app: insp.app
                     title: "Limiter"
                     note: "Never lets this output go over the ceiling"
@@ -514,14 +514,14 @@ Rectangle {
                     }
                 }
 
-                // ---- Vox Pro: record an output ----
+                // ---- Record an output ----
                 Block {
-                    visible: insp.app.pro && insp.isBus
-                    readonly property bool rec: insp.app.pro && insp.app.isRecording(insp.slot)
+                    visible: insp.isBus
+                    readonly property bool rec: insp.app.isRecording(insp.slot)
                     app: insp.app
                     title: "Record"
                     note: rec ? "Recording " + insp.app.elapsed(insp.app.clock - (insp.app.recordingSince[insp.ch.label] || insp.app.clock))
-                              : "Saves what this output carries to Music/" + insp.app.appName + " as " + (insp.app.cfg.record_format || "flac").toUpperCase()
+                              : "Saves what this output carries to " + insp.app.recordFolder + " as " + (insp.app.cfg.record_format || "flac").toUpperCase()
                     switchable: true
                     on: rec
                     onToggled: insp.app.recordBus(insp.slot, !rec)
@@ -592,7 +592,7 @@ Rectangle {
                         enabled: !insp.lastOne
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: insp.app.removeAsk = insp.me
+                        onClicked: insp.app.askRemove(insp.kind, insp.slot, insp.me)
                     }
                 }
                 Text {

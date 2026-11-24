@@ -32,7 +32,7 @@ Card {
     // A click anywhere on the strip that isn't on one of its controls selects it.
     MouseArea {
         anchors.fill: parent
-        onClicked: strip.app.selectChannel(strip.kind, strip.slot, true)
+        onClicked: strip.app.pickChannel(strip.kind, strip.slot)
     }
 
     ColumnLayout {
@@ -67,7 +67,7 @@ Card {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: strip.app.selectChannel(strip.kind, strip.slot, true)
+                onClicked: strip.app.pickChannel(strip.kind, strip.slot)
             }
             // Apps carries everything, voice chat included, so warn while it goes to a mic.
             Text {
@@ -139,8 +139,8 @@ Card {
             }
         }
 
-        // The switches: gate and duck on a hardware input, the EQ on an output. Vox Pro adds a row of
-        // EQ / COMP / FX on every input, and LIM and FX under an output's EQ.
+        // The switches: gate and duck on a hardware input, then EQ / COMP (and FX in Vox Pro) on every input;
+        // EQ, LIM (and FX) stacked on an output.
         RowLayout {
             visible: strip.full && !strip.virtualIn
             Layout.fillWidth: true
@@ -163,7 +163,7 @@ Card {
             }
         }
         RowLayout {
-            visible: strip.full && strip.app.pro
+            visible: strip.full
             Layout.fillWidth: true
             spacing: 5
             Pill {
@@ -183,6 +183,7 @@ Card {
                 onToggled: strip.set(s => s.comp_on = !s.comp_on)
             }
             Pill {
+                visible: strip.app.pro
                 Layout.fillWidth: true; Layout.preferredWidth: 20
                 app: strip.app
                 text: "FX"
@@ -202,7 +203,7 @@ Card {
             onToggled: strip.app.openEq("bus", strip.slot)
         }
         Pill {
-            visible: strip.isBus && !strip.condensed && strip.app.pro
+            visible: strip.isBus && !strip.condensed
             Layout.fillWidth: true
             Layout.topMargin: -5
             app: strip.app
@@ -284,15 +285,15 @@ Card {
                 tip: strip.ch.mute ? "Muted" : "Mute"
                 onToggled: strip.set(s => s.mute = !s.mute)
             }
-            // Vox Pro: record what this output carries.
+            // Record what this output carries.
             Pill {
-                visible: strip.isBus && strip.app.pro && !strip.tight
+                visible: strip.isBus && !strip.tight
                 Layout.fillWidth: true; Layout.preferredWidth: 20
                 app: strip.app
                 kind: "rec"
                 text: "●"
-                checked: strip.app.pro && strip.app.isRecording(strip.slot)
-                tip: checked ? "Stop and save the recording" : "Record this output to a file (Music/" + strip.app.appName + ")"
+                checked: strip.app.isRecording(strip.slot)
+                tip: checked ? "Stop and save the recording" : "Record this output to a file (" + strip.app.recordFolder + ")"
                 onToggled: strip.app.recordBus(strip.slot, !checked)
             }
             Pill {

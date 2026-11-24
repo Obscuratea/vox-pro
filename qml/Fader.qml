@@ -70,7 +70,7 @@ Item {
         color: fader.app.ink
         border.color: Qt.alpha("#000000", 0.2)
         scale: drag.pressed || drag.containsMouse ? 1.12 : 1
-        Behavior on scale { NumberAnimation { duration: 120 } }
+        Behavior on scale { enabled: fader.app.anim !== false; NumberAnimation { duration: 120 } }
         Rectangle {
             anchors.centerIn: parent
             width: fader.vertical ? parent.width - 14 : 2
