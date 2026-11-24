@@ -214,7 +214,6 @@ Rectangle {
                     visible: insp.hardwareIn
                     app: insp.app
                     title: "Noise gate"
-                    note: "Silences the mic between words"
                     switchable: true
                     on: !!insp.ch.gate_on
                     onToggled: insp.set(s => s.gate_on = !s.gate_on)
@@ -278,7 +277,6 @@ Rectangle {
                     visible: insp.hardwareIn
                     app: insp.app
                     title: "Auto-duck"
-                    note: "Lowers the virtual inputs while you talk"
                     switchable: true
                     on: !!insp.ch.duck_on
                     onToggled: insp.set(s => s.duck_on = !s.duck_on)
@@ -325,7 +323,6 @@ Rectangle {
                     visible: insp.virtualIn
                     app: insp.app
                     title: "Playing here"
-                    note: "Drag a program onto a strip to move it"
                     StreamList {
                         Layout.fillWidth: true
                         Layout.preferredHeight: Math.max(1, Math.min(6, insp.playing.length)) * 40 - 6
@@ -404,7 +401,6 @@ Rectangle {
                     visible: !insp.isBus
                     app: insp.app
                     title: "Compressor"
-                    note: "Turns loud parts down so the level stays even"
                     switchable: true
                     on: !!insp.ch.comp_on
                     onToggled: insp.set(s => s.comp_on = !s.comp_on)
@@ -459,7 +455,6 @@ Rectangle {
                     visible: insp.isBus
                     app: insp.app
                     title: "Limiter"
-                    note: "Never lets this output go over the ceiling"
                     switchable: true
                     on: !!insp.ch.limiter_on
                     onToggled: insp.set(b => b.limiter_on = !b.limiter_on)
@@ -479,7 +474,6 @@ Rectangle {
                     visible: insp.app.pro
                     app: insp.app
                     title: "Plugins"
-                    note: insp.plugins.length === 0 ? "LV2, CLAP and VST3 effects" : insp.plugins.length + (insp.plugins.length === 1 ? " plugin" : " plugins") + ", in order"
                     switchable: insp.plugins.length > 0
                     on: insp.plugins.length === 0 || insp.ch.fx_on !== false
                     onToggled: insp.set(c => c.fx_on = c.fx_on === false)
@@ -521,7 +515,7 @@ Rectangle {
                     app: insp.app
                     title: "Record"
                     note: rec ? "Recording " + insp.app.elapsed(insp.app.clock - (insp.app.recordingSince[insp.ch.label] || insp.app.clock))
-                              : "Saves what this output carries to " + insp.app.recordFolder + " as " + (insp.app.cfg.record_format || "flac").toUpperCase()
+                              : insp.app.recordFolder + " · " + (insp.app.cfg.record_format || "flac").toUpperCase()
                     switchable: true
                     on: rec
                     onToggled: insp.app.recordBus(insp.slot, !rec)
@@ -532,7 +526,6 @@ Rectangle {
                     visible: !insp.isBus
                     app: insp.app
                     title: "Routing"
-                    note: "Where this input goes"
                     GridLayout {
                         Layout.fillWidth: true
                         columns: Math.min(5, Math.max(1, insp.app.aIdx.length + insp.app.bIdx.length))

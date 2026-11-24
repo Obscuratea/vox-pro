@@ -374,7 +374,8 @@ ApplicationWindow {
 
     // ---- Recording: one entry per output, the file being written, "!reason" if it failed, "" when idle ----
     property var recording: []
-    property string recordingJson: "[]"
+    property string recordingJson: ""
+    property bool recordingPolled: false
     // When each output's recording started (ms), by label, for the timer in the status bar.
     property var recordingSince: ({})
     function isRecording(bus) { return !!recording[bus] && recording[bus][0] !== "!"; }
@@ -388,12 +389,15 @@ ApplicationWindow {
         const before = recording, since = Object.assign({}, recordingSince);
         recordingJson = rec;
         recording = JSON.parse(rec);
+        // The first look only learns the state; messages are for changes after that.
+        const quiet = !recordingPolled;
+        recordingPolled = true;
         for (let i = 0; i < recording.length; i++) {
             const label = (cfg.buses[i] || blank).label;
             const now = recording[i] || "", was = before[i] || "";
             if (now !== "" && now[0] !== "!") { if (!since[label]) since[label] = Date.now(); }
             else delete since[label];
-            if (now === was) continue;
+            if (now === was || quiet) continue;
             if (now[0] === "!") flash("Can't record " + label + ": " + now.slice(1));
             else if (now !== "" && was === "") flash("Recording " + label + " to " + now);
             else if (now === "" && was !== "" && was[0] !== "!") flash("Saved the " + label + " recording in " + recordFolder);

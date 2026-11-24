@@ -1,53 +1,50 @@
 # Vox Pro
 
 The bigger sibling of [Vox Obscurus](https://github.com/Obscuratea/vox-obscurus): a PipeWire audio
-mixer and router for Linux with **8 inputs, 8 outputs** and the tools a streamer or podcaster
-reaches for. Rust + PipeWire for the audio, Qt Quick for the interface. Not affiliated with VB-Audio.
+mixer and router for Linux with more channels and a **plugin rack**, for streamers and podcasters.
+Rust + PipeWire for the audio, Qt Quick for the interface. Not affiliated with VB-Audio.
 
 ![Vox Pro](docs/screenshots/main.png)
 
 ## What's in it
 
-- **8 strips:** three hardware inputs (mics, line-ins, anything PipeWire lists) and five virtual
-  ones that programs play into: **Apps**, **Media**, **Game**, **Chat** and **Browser**. Each shows
-  up as a *Vox Pro* output device, so you can send a program to its own strip.
-- **8 outputs:** **A1–A5** play on hardware you pick (headphones, speakers, a soundbar), and
-  **B1–B3** are virtual microphones for Discord, OBS and friends.
-- **Routing matrix:** every strip to every output in one grid.
-- **Parametric EQ on every strip and every output:** six cells each (bell, low and high shelf, low and
-  high pass, notch) with frequency, gain and width. Drag the dots on the curve or set exact values.
-- **Compressor on every strip**, mics and programs alike: soft knee, with threshold, ratio, attack,
-  release and make-up gain.
-- **Plugin rack:** load LV2, CLAP and VST3 plugins (LSP, Calf, x42, Dragonfly and anything else you have installed) on any strip
-  or output, up to six in a chain, with a control for every plugin parameter.
-- **Voice tools on the mic strips:** noise gate, bass, brightness and pitch, plus auto-duck that
-  dips Apps and Media while you talk.
-- **A limiter on every output** with an adjustable ceiling, so nothing clips on the way out.
-- **Recording:** hit **Rec** on any output to record exactly what it carries to
-  `~/Music/Vox Pro/`. Pick **FLAC** (lossless, the default), **WAV** or **Opus** (small and lossy)
-  in Settings.
-- **Scenes, solo, per-program mute and drag-to-route**, push-to-talk and a mute-mics key (KDE global
-  shortcuts), tray icon.
-- **Themes:** the gold-on-black **PRO** look by default, plus Vox, Pure Black, Lavender, Crystal and
-  more, or any picture as the window background.
+Everything in Vox Obscurus, plus:
+
+- **More channels:** up to 6 hardware inputs, 8 virtual inputs (Apps, Media, Game, Chat, Browser,
+  Music, Stream, Aux), 6 A outputs and 4 B virtual mics. It starts with 3 hardware inputs, 5 virtual
+  inputs, A1–A5 and B1–B3; add or remove channels with the **+** in each section header or in
+  Settings → Layout.
+- **Plugin rack:** LV2, CLAP and VST3 plugins (LSP, Calf, x42, Dragonfly and anything else you have
+  installed) on any input or output, up to six in a chain, with a control for every plugin parameter.
+  The **FX** switch on a strip bypasses its whole chain.
+
+And, as in Vox Obscurus:
+
+- **Parametric EQ, compressor and voice tools** on the inputs (noise gate, bass, brightness, pitch,
+  auto-duck), **parametric EQ and a limiter** on every output.
+- **Recording:** the red dot on an output records exactly what it carries, as FLAC, WAV or Opus, to
+  `~/Music/Vox Pro` or a folder you pick.
+- **Routing page**, scenes in the top bar, solo, per-program mute and drag-to-route, names for every
+  channel, tray icon, global shortcuts (push to talk, mute all mics, next scene, show or hide), start with
+  the computer, mute mics when the screen locks, sample rate and latency.
+- **Themes:** **Gold** by default, plus Night, Glass and Light, or any picture as the window background.
 - **Built-in updater** (Settings → About): one click downloads the newest release and installs it.
   Your settings are never touched.
 
-Flip any strip to reach its tools:
+Click a strip to open its inspector: device, voice tools, EQ, compressor or limiter, plugins and
+recording.
 
-![Voice, EQ, compressor and plugins](docs/screenshots/tools.png)
-
-The parametric EQ, here on an output:
-
-![Parametric EQ](docs/screenshots/eq.png)
-
-The plugin rack, with a plugin's controls and the list of installed plugins:
-
-| Controls | Installed plugins |
+| An input | An output, recording |
 | --- | --- |
-| ![Plugin controls](docs/screenshots/rack.png) | ![Plugin browser](docs/screenshots/rack-browser.png) |
+| ![Inspector on the mic](docs/screenshots/inspector.png) | ![Inspector on a virtual mic](docs/screenshots/output.png) |
 
-![Routing matrix](docs/screenshots/matrix.png)
+| Parametric EQ (on any input or output) | Routing |
+| --- | --- |
+| ![Parametric EQ](docs/screenshots/eq.png) | ![Routing](docs/screenshots/routing.png) |
+
+The plugin rack:
+
+![Plugin rack](docs/screenshots/rack.png)
 
 ![Settings](docs/screenshots/settings.png)
 
@@ -80,7 +77,8 @@ After that, updates come from inside the app.
 
 ## Build and run
 
-Needs Rust, clang, cmake, Qt 6 (base and declarative), PipeWire development files, SoundTouch and lilv.
+Needs Rust, clang, cmake, Qt 6 (base, declarative, and Widgets for the tray icon), KWindowSystem,
+PipeWire development files, SoundTouch and lilv.
 
     cargo run --release
 
@@ -117,6 +115,9 @@ SoundTouch are LGPL, used as system libraries) are in Settings → About and in
 - `src/plugins.rs`: the plugin host (LV2), `src/plug_clap.rs` and `src/plug_vst3.rs`: the CLAP and VST3 sides
 - `src/recorder.rs`: WAV, FLAC and Opus writers
 - `src/updater.rs`: the in-app updater
-- `src/settings.rs`: the saved layout and scenes
+- `src/settings.rs`: the saved layout, scenes and preferences
+- `src/shortcuts.rs`: global shortcuts through KDE's KGlobalAccel
+- `src/desktop.rs`: start with the computer, and the screen-lock watch
 - `src/bridge.rs`: the `Mixer` object QML talks to
-- `qml/`: the interface
+- `qml/`: the interface. Every file except `qml/Main.qml`, `qml/PluginRack.qml` and the shared Rust
+  files above are the same in Vox Obscurus.
