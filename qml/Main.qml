@@ -366,8 +366,8 @@ ApplicationWindow {
     // The line under the name: what the channel is connected to.
     function subOf(kind, index) {
         const ch = (kind === "bus" ? cfg.buses[index] : cfg.strips[index]) || blank;
-        if (kind === "bus") return ch.virtual_output ? "Virtual mic for other programs" : ch.device ? shortDevice(describe(devices.sinks, ch.device)) : "No device";
-        if (ch.virtual_input) return "Programs play here";
+        if (kind === "bus") return ch.virtual_output ? appName + " " + ch.label + " (Mic)" : ch.device ? shortDevice(describe(devices.sinks, ch.device)) : "No device";
+        if (ch.virtual_input) return appName + " " + ch.label;
         return ch.source ? shortDevice(describe(devices.sources, ch.source)) : "No device";
     }
     property string status: Qt.application.arguments.indexOf("--status") >= 0 ? "System output is now Vox Pro Apps." : ""
@@ -919,7 +919,6 @@ ApplicationWindow {
                                     contentItem: Column {
                                         spacing: 10
                                         Text { text: "New scene"; color: win.ink; font.pixelSize: 13; font.weight: Font.DemiBold }
-                                        Text { width: parent.width; wrapMode: Text.WordWrap; text: "Saves every level, mute and route as they are now."; color: win.faint; font.pixelSize: 11 }
                                         Rectangle {
                                             width: parent.width; height: 32
                                             radius: win.soft ? 9 : 0

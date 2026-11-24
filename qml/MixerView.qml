@@ -202,10 +202,10 @@ Item {
             y: view.pad
             height: view.height - 2 * view.pad
             spacing: view.sectionGap
-            Section { host: view; height: parent.height; title: "Inputs"; icon: "mic"; sub: view.condensed ? "" : "hardware"; group: "hw"; slots: view.app.hwIdx; shown: view.app.showInputs }
-            Section { host: view; height: parent.height; title: view.condensed && view.app.virtIdx.length < 2 ? "Virtual" : "Virtual inputs"; icon: "app"; sub: view.condensed ? "" : "programs play here"; group: "virt"; slots: view.app.virtIdx; shown: view.app.showVirtual }
-            Section { host: view; height: parent.height; title: "Listen"; icon: "out"; sub: view.app.aIdx.length > 1 ? "A outputs" : ""; kind: "bus"; slim: true; group: "a"; slots: view.app.aIdx; shown: view.app.showOutputs }
-            Section { host: view; height: parent.height; title: "Send"; icon: "send"; sub: view.app.bIdx.length > 1 ? "B virtual mics" : ""; kind: "bus"; slim: true; group: "b"; slots: view.app.bIdx; shown: view.app.showOutputs }
+            Section { host: view; height: parent.height; title: "Inputs"; icon: "mic"; sub: ""; group: "hw"; slots: view.app.hwIdx; shown: view.app.showInputs }
+            Section { host: view; height: parent.height; title: view.condensed && view.app.virtIdx.length < 2 ? "Virtual" : "Virtual inputs"; icon: "app"; sub: ""; group: "virt"; slots: view.app.virtIdx; shown: view.app.showVirtual }
+            Section { host: view; height: parent.height; title: "Listen"; icon: "out"; sub: ""; kind: "bus"; slim: true; group: "a"; slots: view.app.aIdx; shown: view.app.showOutputs }
+            Section { host: view; height: parent.height; title: "Send"; icon: "send"; sub: ""; kind: "bus"; slim: true; group: "b"; slots: view.app.bIdx; shown: view.app.showOutputs }
         }
     }
 
@@ -227,8 +227,8 @@ Item {
             spacing: 8
             MiniSection { host: view; width: parent.width; title: "Inputs"; icon: "mic"; group: "hw"; slots: view.app.hwIdx; shown: view.app.showInputs }
             MiniSection { host: view; width: parent.width; title: "Virtual inputs"; icon: "app"; group: "virt"; slots: view.app.virtIdx; shown: view.app.showVirtual }
-            MiniSection { host: view; width: parent.width; title: "Listen"; icon: "out"; sub: "A outputs"; kind: "bus"; group: "a"; slots: view.app.aIdx; shown: view.app.showOutputs }
-            MiniSection { host: view; width: parent.width; title: "Send"; icon: "send"; sub: "B virtual mics"; kind: "bus"; group: "b"; slots: view.app.bIdx; shown: view.app.showOutputs }
+            MiniSection { host: view; width: parent.width; title: "Listen"; icon: "out"; sub: ""; kind: "bus"; group: "a"; slots: view.app.aIdx; shown: view.app.showOutputs }
+            MiniSection { host: view; width: parent.width; title: "Send"; icon: "send"; sub: ""; kind: "bus"; group: "b"; slots: view.app.bIdx; shown: view.app.showOutputs }
         }
     }
     }

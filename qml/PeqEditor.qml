@@ -194,15 +194,6 @@ Rectangle {
                     }
                 }
             }
-
-            Text {
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.margins: 12
-                text: "Drag a dot  ·  scroll for width  ·  double-click to flatten"
-                color: editor.app.dim
-                font.pixelSize: 11
-            }
         }
 
         // ---- The six cells ----

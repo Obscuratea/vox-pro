@@ -445,7 +445,7 @@ Flickable {
                 Opt {
                     readonly property string path: decodeURIComponent((scroller.app.cfg.bg_image || "").toString())
                     title: "Picture background"
-                    note: path === "" ? "None chosen. It is cropped to fit, never squashed." : path.substring(path.lastIndexOf("/") + 1)
+                    note: path === "" ? "None chosen" : path.substring(path.lastIndexOf("/") + 1)
                     Toggle {
                         app: scroller.app
                         checked: !!scroller.app.cfg.bg_enabled && !!scroller.app.cfg.bg_image
@@ -516,7 +516,7 @@ Flickable {
                         required property int index
                         readonly property bool on: scroller.app.sceneActive(index)
                         title: modelData.name
-                        note: on ? "The mixer is set like this now" : ""
+                        note: on ? "Active" : ""
                         noteColor: scroller.app.accent
                         Lnk { visible: !sceneOpt.on; text: "Load"; tip: "Switch the mixer to this scene"; onClicked: scroller.app.applyScene(sceneOpt.index) }
                         TextButton { app: scroller.app; implicitHeight: 28; text: "Update"; tip: "Replace this scene with the mixer as it is now"; onClicked: scroller.app.saveScene(sceneOpt.modelData.name) }
@@ -821,7 +821,6 @@ Flickable {
 
                 Opt {
                     title: scroller.app.appName + " " + scroller.app.version
-                    note: "Support its development"
                     Lnk { text: "Ko-fi"; tip: "ko-fi.com/obscuratea"; onClicked: Qt.openUrlExternally("https://ko-fi.com/obscuratea") }
                     Lnk { text: "Patreon"; tip: "patreon.com/Obscuratea"; onClicked: Qt.openUrlExternally("https://patreon.com/Obscuratea") }
                 }
