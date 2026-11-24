@@ -55,6 +55,9 @@ fn is_device(own_name: &str) -> bool {
 const RING: usize = 16_384;
 const STRIDE: usize = 2 * std::mem::size_of::<f32>();
 
+/// How far Dim turns an output down.
+pub const DIM_DB: f32 = -20.0;
+
 /// Per-sample step toward a new gain, about 10 ms to settle, so faders and mutes don't click.
 fn smoothing() -> f32 {
     1.0 - (-1.0 / (0.01 * sample_rate())).exp()
@@ -520,7 +523,8 @@ impl Mixer {
         }
 
         let bus = &self.settings.buses[index];
-        let target = if bus.mute { 0.0 } else { db_to_lin(bus.gain_db) };
+        let target = if bus.mute { 0.0 } else { db_to_lin(bus.gain_db + if bus.dim { DIM_DB } else { 0.0 }) };
+        let mono = bus.mono;
         let state = &mut self.buses[index];
         let step = smoothing();
         let mut peak = [0f32; 2];
@@ -540,8 +544,9 @@ impl Mixer {
         }
         for (frame, bytes) in self.scratch.iter().zip(out.chunks_exact_mut(STRIDE)) {
             state.gain += (target - state.gain) * step;
-            let mut l = frame[0] * state.gain;
-            let mut r = frame[1] * state.gain;
+            let (fl, fr) = if mono { let m = (frame[0] + frame[1]) * 0.5; (m, m) } else { (frame[0], frame[1]) };
+            let mut l = fl * state.gain;
+            let mut r = fr * state.gain;
             if let Some(ceiling) = ceiling {
                 // Brickwall: turn down at once for a peak above the ceiling, ease back up afterwards.
                 let needed = (ceiling / l.abs().max(r.abs()).max(1e-9)).min(1.0);
@@ -1505,6 +1510,46 @@ mod tests {
             cycle += 1;
         }
         assert!(last.1 / b_open > 0.95, "Apps comes back after the hold, got x{}", last.1 / b_open);
+    }
+
+    /// Mono gives both ears (L + R) / 2; Dim turns the output down by DIM_DB without touching the fader.
+    #[test]
+    fn mono_and_dim_on_an_output() {
+        let mut mixer = Mixer::new(Arc::new(Shared::new()));
+        mixer.settings = Settings::default();
+        let apps = mixer.settings.strips.iter().position(|s| s.virtual_input).unwrap();
+        let mut routes = vec![false; mixer.settings.buses.len()];
+        routes[0] = true;
+        mixer.settings.strips[apps].routes = routes;
+        let left_only = |cycle: usize| -> Vec<u8> {
+            let mut bytes = tone_cycle(cycle);
+            for frame in bytes.chunks_exact_mut(STRIDE) {
+                frame[4..8].copy_from_slice(&0f32.to_le_bytes());
+            }
+            bytes
+        };
+        let side = |out: &[u8], ch: usize| out.chunks_exact(STRIDE).map(|f| read_f32(&f[ch * 4..ch * 4 + 4]).abs()).fold(0.0, f32::max);
+        let mut a = vec![0u8; 256 * STRIDE];
+        for cycle in 0..20 {
+            mixer.capture(apps, &left_only(cycle));
+            mixer.playback(0, &mut a);
+        }
+        let (l, r) = (side(&a, 0), side(&a, 1));
+        assert!(l > 0.3 && r < 1e-4, "stereo keeps the sides apart, got {l} / {r}");
+        mixer.settings.buses[0].mono = true;
+        for cycle in 20..40 {
+            mixer.capture(apps, &left_only(cycle));
+            mixer.playback(0, &mut a);
+        }
+        let (ml, mr) = (side(&a, 0), side(&a, 1));
+        assert!((ml - mr).abs() < 1e-5 && (ml - l / 2.0).abs() < 0.02, "mono: both sides half of left, got {ml} / {mr}");
+        mixer.settings.buses[0].dim = true;
+        for cycle in 40..200 {
+            mixer.capture(apps, &left_only(cycle));
+            mixer.playback(0, &mut a);
+        }
+        let dimmed = side(&a, 0);
+        assert!((dimmed / ml - db_to_lin(DIM_DB)).abs() < 0.01, "dim: x{} expected x{}", dimmed / ml, db_to_lin(DIM_DB));
     }
 
     /// The limiter keeps an output under its ceiling no matter how hot the strips are.

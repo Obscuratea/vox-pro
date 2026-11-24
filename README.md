@@ -22,6 +22,7 @@ And, as in Vox Obscurus:
 
 - **Parametric EQ, compressor and voice tools** on the inputs (noise gate, bass, brightness, pitch,
   auto-duck), **parametric EQ and a limiter** on every output.
+- **Mono** and **Dim** (−20 dB) on each A output.
 - **Recording:** the red dot on an output records exactly what it carries, as FLAC, WAV or Opus, to
   `~/Music/Vox Pro` or a folder you pick.
 - **Routing page**, scenes in the top bar, solo, per-program mute and drag-to-route, names for every

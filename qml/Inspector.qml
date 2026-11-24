@@ -508,6 +508,32 @@ Rectangle {
                     }
                 }
 
+                // ---- Mono and Dim on a listening output ----
+                RowLayout {
+                    visible: insp.isBus && !insp.ch.virtual_output
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Block {
+                        Layout.preferredWidth: 1
+                        Layout.fillHeight: true
+                        app: insp.app
+                        title: "Mono"
+                        switchable: true
+                        on: !!insp.ch.mono
+                        onToggled: insp.set(b => b.mono = !b.mono)
+                    }
+                    Block {
+                        Layout.preferredWidth: 1
+                        Layout.fillHeight: true
+                        app: insp.app
+                        title: "Dim"
+                        note: "−20 dB"
+                        switchable: true
+                        on: !!insp.ch.dim
+                        onToggled: insp.set(b => b.dim = !b.dim)
+                    }
+                }
+
                 // ---- Record an output ----
                 Block {
                     visible: insp.isBus

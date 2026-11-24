@@ -137,6 +137,10 @@ pub struct Bus {
     /// Brickwall limiter: nothing leaves this output louder than `limiter_db`.
     pub limiter_on: bool,
     pub limiter_db: f32,
+    /// Both channels carry (L + R) / 2.
+    pub mono: bool,
+    /// Turned down by DIM_DB without moving the fader.
+    pub dim: bool,
     /// Parametric EQ on what this output plays: six cells (see peq.rs), then an output gain in dB.
     pub eq_on: bool,
     pub eq: Vec<Cell>,
@@ -158,6 +162,8 @@ impl Default for Bus {
             mute: false,
             limiter_on: false,
             limiter_db: -1.0,
+            mono: false,
+            dim: false,
             eq_on: false,
             eq: peq::default_cells(),
             eq_gain_db: 0.0,
