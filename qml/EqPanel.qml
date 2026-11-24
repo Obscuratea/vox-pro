@@ -28,6 +28,7 @@ ColumnLayout {
             app: card.app
             cells: card.strip.eq || []
             on: !!card.strip.eq_on
+            gain: card.strip.eq_gain_db || 0
         }
         MouseArea {
             id: curveMouse

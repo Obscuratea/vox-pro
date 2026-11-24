@@ -41,9 +41,10 @@ pub struct Strip {
     /// Duck what the B mics carry / what the A buses play.
     pub duck_b: bool,
     pub duck_a: bool,
-    /// Parametric EQ: six cells (see peq.rs).
+    /// Parametric EQ: six cells (see peq.rs), then an output gain in dB.
     pub eq_on: bool,
     pub eq: Vec<Cell>,
+    pub eq_gain_db: f32,
     /// The three-band EQ of 0.1.0, read from old saves and turned into the first cells. Never written.
     #[serde(skip_serializing)]
     pub eq_hz: Option<[f32; 3]>,
@@ -86,6 +87,7 @@ impl Default for Strip {
             duck_a: false,
             eq_on: false,
             eq: peq::default_cells(),
+            eq_gain_db: 0.0,
             eq_hz: None,
             eq_db: None,
             plugins: Vec::new(),
@@ -113,9 +115,10 @@ pub struct Bus {
     /// Brickwall limiter: nothing leaves this output louder than `limiter_db`.
     pub limiter_on: bool,
     pub limiter_db: f32,
-    /// Parametric EQ on what this output plays: six cells (see peq.rs).
+    /// Parametric EQ on what this output plays: six cells (see peq.rs), then an output gain in dB.
     pub eq_on: bool,
     pub eq: Vec<Cell>,
+    pub eq_gain_db: f32,
     /// LV2 plugins on the mix, before the EQ.
     pub plugins: Vec<Slot>,
 }
@@ -132,6 +135,7 @@ impl Default for Bus {
             limiter_db: -1.0,
             eq_on: false,
             eq: peq::default_cells(),
+            eq_gain_db: 0.0,
             plugins: Vec::new(),
         }
     }
@@ -264,6 +268,7 @@ impl Settings {
                 }
             }
             peq::sanitize(&mut strip.eq);
+            strip.eq_gain_db = peq::sanitize_gain(strip.eq_gain_db);
             plugins::sanitize(&mut strip.plugins);
             strip.comp_threshold_db = strip.comp_threshold_db.clamp(-60.0, 0.0);
             strip.comp_ratio = strip.comp_ratio.clamp(1.0, 20.0);
@@ -277,6 +282,7 @@ impl Settings {
             bus.gain_db = bus.gain_db.clamp(-60.0, 12.0);
             bus.limiter_db = bus.limiter_db.clamp(-24.0, 0.0);
             peq::sanitize(&mut bus.eq);
+            bus.eq_gain_db = peq::sanitize_gain(bus.eq_gain_db);
             plugins::sanitize(&mut bus.plugins);
         }
         if !matches!(s.record_format.as_str(), "wav" | "flac" | "opus") {
@@ -286,10 +292,12 @@ impl Settings {
         for scene in s.scenes.iter_mut() {
             for strip in scene.strips.iter_mut() {
                 peq::sanitize(&mut strip.eq);
+                strip.eq_gain_db = peq::sanitize_gain(strip.eq_gain_db);
                 plugins::sanitize(&mut strip.plugins);
             }
             for bus in scene.buses.iter_mut() {
                 peq::sanitize(&mut bus.eq);
+                bus.eq_gain_db = peq::sanitize_gain(bus.eq_gain_db);
                 plugins::sanitize(&mut bus.plugins);
             }
         }

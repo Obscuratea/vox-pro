@@ -110,6 +110,7 @@ Rectangle {
                     app: row.app
                     cells: row.bus.eq || []
                     on: !!row.bus.eq_on
+                    gain: row.bus.eq_gain_db || 0
                 }
                 MouseArea {
                     id: eqMouse

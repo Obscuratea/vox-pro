@@ -7,6 +7,8 @@ Canvas {
     required property var app
     property var cells: []
     property bool on: true
+    /// Output gain after the cells (dB): the whole curve moves up or down by it.
+    property real gain: 0
     property bool grid: false
     /// The cell whose own curve is drawn too (editor), or -1.
     property int selected: -1
@@ -56,6 +58,7 @@ Canvas {
 
     onCellsChanged: requestPaint()
     onOnChanged: requestPaint()
+    onGainChanged: requestPaint()
     onSelectedChanged: requestPaint()
     onWidthChanged: requestPaint()
     onHeightChanged: requestPaint()
@@ -98,11 +101,12 @@ Canvas {
 
         const all = cells.map(c => coefs(c));
         const step = grid ? 2 : 1;
+        const lift = gain;
         function trace(list) {
             ctx.beginPath();
             for (let x = 0; x <= w; x += step) {
                 const hz = hzAt(x);
-                let db = 0;
+                let db = lift;
                 for (const c of list) db += gainDb(c, hz);
                 const y = Math.max(-4, Math.min(h + 4, yOf(db)));
                 if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
@@ -112,9 +116,24 @@ Canvas {
         if (grid && selected >= 0 && selected < all.length && all[selected]) {
             // The selected cell on its own, as a soft fill.
             trace([all[selected]]);
-            ctx.lineTo(w, yOf(0)); ctx.lineTo(0, yOf(0)); ctx.closePath();
+            ctx.lineTo(w, yOf(lift)); ctx.lineTo(0, yOf(lift)); ctx.closePath();
             ctx.fillStyle = Qt.alpha(strokeEnd, 0.16 * alive);
             ctx.fill();
+        }
+        if (Math.abs(lift) >= 0.05) {
+            // Where "flat" now sits, so the lift or cut reads against the 0 dB line.
+            const y = Math.round(yOf(lift)) + 0.5;
+            ctx.strokeStyle = Qt.alpha(strokeEnd, 0.55 * alive);
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 4]);
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+            ctx.setLineDash([]);
+            if (grid) {
+                ctx.fillStyle = Qt.alpha(strokeEnd, 0.9 * alive);
+                ctx.font = "bold 11px sans-serif";
+                const text = "Output " + (lift > 0 ? "+" : "−") + Math.abs(lift).toFixed(1) + " dB";
+                ctx.fillText(text, w - ctx.measureText(text).width - 12, lift > 0 ? y - 6 : y + 15);
+            }
         }
         const sweep = ctx.createLinearGradient(0, 0, w, 0);
         sweep.addColorStop(0, Qt.alpha(stroke, alive));

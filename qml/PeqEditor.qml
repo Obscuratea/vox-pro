@@ -15,6 +15,7 @@ Rectangle {
     readonly property var target: kind === "bus" ? app.cfg.buses[index] : app.cfg.strips[index]
     readonly property var cells: target && target.eq ? target.eq : []
     readonly property bool on: !!(target && target.eq_on)
+    readonly property real gain: target && target.eq_gain_db ? target.eq_gain_db : 0
     property int selected: 0
 
     readonly property var kinds: [
@@ -63,6 +64,17 @@ Rectangle {
                 font.pixelSize: 13
                 font.letterSpacing: editor.app.soft || editor.app.diamond ? 0.3 : 2
             }
+            ToneSlider {
+                Layout.preferredWidth: 260
+                app: editor.app
+                label: editor.app.t("Output")
+                from: -12
+                to: 12
+                step: 0.1
+                wheelStep: 0.5
+                value: editor.gain
+                onMoved: v => editor.set(t => { t.eq_gain_db = Math.round(v * 10) / 10; t.eq_on = true; })
+            }
             Chip {
                 app: editor.app
                 text: editor.on ? editor.app.t("On") : editor.app.t("Off")
@@ -73,8 +85,8 @@ Rectangle {
             TextButton {
                 app: editor.app
                 text: editor.app.diamond ? "flat" : "Flat"
-                tip: "Put every cell back to flat"
-                onClicked: editor.set(t => { t.eq = JSON.parse(JSON.stringify(editor.fresh)); })
+                tip: "Put every cell and the output gain back to flat"
+                onClicked: editor.set(t => { t.eq = JSON.parse(JSON.stringify(editor.fresh)); t.eq_gain_db = 0; })
             }
             TextButton {
                 app: editor.app
@@ -99,6 +111,7 @@ Rectangle {
                 app: editor.app
                 cells: editor.cells
                 on: editor.on
+                gain: editor.gain
                 grid: true
                 selected: editor.selected
             }
@@ -109,7 +122,8 @@ Rectangle {
                 hoverEnabled: true
                 property int grabbed: -1
                 property int hovered: -1
-                function nodeY(cell) { return curve.yOf(curve.gained(cell) ? cell.db : 0); }
+                // Dots ride on the curve, so they move with the output gain too.
+                function nodeY(cell) { return curve.yOf((curve.gained(cell) ? cell.db : 0) + editor.gain); }
                 function nearest(x, y) {
                     let best = -1, bestD = 22 * 22;
                     for (let i = 0; i < editor.cells.length; i++) {
@@ -128,7 +142,7 @@ Rectangle {
                 onPositionChanged: mouse => {
                     if (grabbed < 0) { hovered = nearest(mouse.x, mouse.y); return; }
                     const hz = Math.round(Math.max(20, Math.min(20000, curve.hzAt(mouse.x))));
-                    const db = Math.round(Math.max(-18, Math.min(18, curve.dbAt(mouse.y))) * 10) / 10;
+                    const db = Math.round(Math.max(-18, Math.min(18, curve.dbAt(mouse.y) - editor.gain)) * 10) / 10;
                     editor.setCell(grabbed, c => { c.hz = hz; if (curve.gained(c)) c.db = db; c.on = true; });
                 }
                 onExited: hovered = -1

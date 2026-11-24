@@ -94,7 +94,8 @@
       "amount": 0.4
      }
     }
-   ]
+   ],
+   "eq_gain_db": 0
   },
   {
    "label": "Input 2",
@@ -174,7 +175,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   },
   {
    "label": "Input 3",
@@ -254,7 +256,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   },
   {
    "label": "Apps",
@@ -334,7 +337,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   },
   {
    "label": "Media",
@@ -414,7 +418,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   },
   {
    "label": "Game",
@@ -494,7 +499,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   },
   {
    "label": "Chat",
@@ -574,7 +580,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   },
   {
    "label": "Browser",
@@ -654,7 +661,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   }
  ],
  "buses": [
@@ -718,7 +726,8 @@
      "on": true,
      "params": {}
     }
-   ]
+   ],
+   "eq_gain_db": 0
   },
   {
    "label": "A2",
@@ -773,7 +782,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   },
   {
    "label": "A3",
@@ -828,7 +838,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   },
   {
    "label": "A4",
@@ -883,7 +894,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   },
   {
    "label": "A5",
@@ -938,7 +950,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   },
   {
    "label": "B1",
@@ -993,7 +1006,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   },
   {
    "label": "B2",
@@ -1048,7 +1062,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   },
   {
    "label": "B3",
@@ -1103,7 +1118,8 @@
      "q": 0.71
     }
    ],
-   "plugins": []
+   "plugins": [],
+   "eq_gain_db": 0
   }
  ],
  "theme": "pro",

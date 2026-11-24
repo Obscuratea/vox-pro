@@ -333,10 +333,44 @@ pub fn install(source: &std::path::Path) -> Result<(), String> {
     let target = home.join(folder);
     std::fs::create_dir_all(&target).map_err(|e| e.to_string())?;
     let dest = target.join(name);
+    if ext != "lv2" {
+        check_linux_build(source)?;
+    }
     if dest.exists() {
-        return Err("A plugin with that name is already installed.".into());
+        // A newer download of the same plugin (or a broken copy from before) is replaced.
+        let gone = if dest.is_dir() { std::fs::remove_dir_all(&dest) } else { std::fs::remove_file(&dest) };
+        gone.map_err(|e| format!("Could not replace the installed copy: {e}"))?;
     }
     copy_all(source, &dest).map_err(|e| format!("Could not copy it: {e}"))
+}
+
+const WINDOWS_ONLY: &str = "That is the Windows version of the plugin. Vox needs the Linux build: for a .vst3 folder, one with a Contents/x86_64-linux folder inside.";
+
+/// Refuse a dropped .clap or .vst3 that is not built for Linux, before anything is copied.
+fn check_linux_build(source: &std::path::Path) -> Result<(), String> {
+    let is_elf = |p: &std::path::Path| {
+        use std::io::Read;
+        let mut magic = [0u8; 4];
+        std::fs::File::open(p).and_then(|mut f| f.read_exact(&mut magic)).is_ok() && &magic == b"\x7fELF"
+    };
+    if source.is_dir() {
+        let linux = ["x86_64-linux", "aarch64-linux"].iter().any(|a| {
+            std::fs::read_dir(source.join("Contents").join(a)).is_ok_and(|d| d.flatten().any(|e| e.path().extension().is_some_and(|x| x == "so")))
+        });
+        if linux {
+            return Ok(());
+        }
+        return Err(if source.join("Contents").join("x86_64-win").exists() { WINDOWS_ONLY.into() } else { "There is no Linux plugin inside that folder.".into() });
+    }
+    if is_elf(source) {
+        return Ok(());
+    }
+    let inside_win = source.ancestors().any(|a| a.file_name().is_some_and(|n| n.to_string_lossy().contains("-win")));
+    Err(if inside_win {
+        "That file is from inside a Windows plugin. Vox needs the Linux build, and a .vst3 folder should be dropped whole.".into()
+    } else {
+        "That plugin isn't built for Linux. Vox can't use Windows plugins.".into()
+    })
 }
 
 fn copy_all(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
@@ -740,6 +774,12 @@ mod tests {
     fn dropped_plugins_are_checked_before_they_are_copied() {
         assert!(install(std::path::Path::new("/tmp/Reverb.dll")).unwrap_err().contains("Windows"));
         assert!(install(std::path::Path::new("/tmp/notes.txt")).is_err());
+        let dir = std::env::temp_dir().join(format!("vox-win-{}", std::process::id())).join("x86_64-win");
+        std::fs::create_dir_all(&dir).unwrap();
+        let fake = dir.join("Alt Denoiser.vst3");
+        std::fs::write(&fake, b"MZ\x90\x00").unwrap();
+        assert!(install(&fake).unwrap_err().contains("Windows"));
+        let _ = std::fs::remove_dir_all(dir.parent().unwrap());
         assert!(install(std::path::Path::new("/tmp/vox-no-such-plugin.clap")).is_err());
     }
 

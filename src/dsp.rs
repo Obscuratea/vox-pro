@@ -283,8 +283,8 @@ impl Voice {
         self.pitch.set_semitones(pitch_semitones);
     }
 
-    pub fn set_eq(&mut self, on: bool, cells: &[Cell]) {
-        self.eq.set(on, cells);
+    pub fn set_eq(&mut self, on: bool, cells: &[Cell], gain_db: f32) {
+        self.eq.set(on, cells, gain_db);
     }
 
     pub fn set_comp(&mut self, params: Option<CompParams>) {
@@ -449,7 +449,7 @@ mod pro_tests {
             let mut v = Voice::default();
             let mut cells = crate::peq::default_cells();
             cells[2] = Cell { on: true, kind: "peak".into(), hz: 1000.0, db: 9.0, q: 1.0 };
-            v.set_eq(true, &cells);
+            v.set_eq(true, &cells, 0.0);
             let out: Vec<f32> = tone(0.1, hz, 24_000).into_iter().map(|f| v.process(f, None)[0]).collect();
             rms(&out[12_000..]) / (0.1 / std::f32::consts::SQRT_2)
         };

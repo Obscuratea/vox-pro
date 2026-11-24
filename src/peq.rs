@@ -51,6 +51,12 @@ pub fn sanitize(cells: &mut Vec<Cell>) {
     }
 }
 
+/// Bring a saved output gain into range.
+pub fn sanitize_gain(db: f32) -> f32 {
+    let db = if db.is_finite() { (db * 10.0).round() / 10.0 } else { 0.0 };
+    db.clamp(-GAIN_RANGE, GAIN_RANGE)
+}
+
 /// Normalised biquad coefficients (a0 = 1).
 #[derive(Clone, Copy, PartialEq)]
 struct Coefs {
@@ -98,9 +104,15 @@ fn coefs(cell: &Cell) -> Coefs {
     Coefs { b0: b0 / a0, b1: b1 / a0, b2: b2 / a0, a1: a1 / a0, a2: a2 / a0 }
 }
 
+/// The output gain is limited to this, up or down (dB).
+pub const GAIN_RANGE: f32 = 12.0;
+
 /// The running filter for one strip or bus. Changing the cells keeps the filter state, so edits don't click.
 pub struct Peq {
     on: bool,
+    /// Output gain after the cells (linear), and where it is on its way there (it glides, so moving it doesn't click).
+    gain: f64,
+    level: f64,
     coefs: [Coefs; CELLS],
     /// Cells that do something; the flat ones are skipped.
     active: [bool; CELLS],
@@ -110,13 +122,18 @@ pub struct Peq {
 
 impl Default for Peq {
     fn default() -> Self {
-        Self { on: false, coefs: [FLAT; CELLS], active: [false; CELLS], z1: [[0.0; 2]; CELLS], z2: [[0.0; 2]; CELLS] }
+        Self { on: false, gain: 1.0, level: 1.0, coefs: [FLAT; CELLS], active: [false; CELLS], z1: [[0.0; 2]; CELLS], z2: [[0.0; 2]; CELLS] }
     }
 }
 
 impl Peq {
-    pub fn set(&mut self, on: bool, cells: &[Cell]) {
+    pub fn set(&mut self, on: bool, cells: &[Cell], gain_db: f32) {
+        if on != self.on {
+            self.level = 1.0;
+        }
         self.on = on;
+        let db = if gain_db.is_finite() { gain_db.clamp(-GAIN_RANGE, GAIN_RANGE) } else { 0.0 };
+        self.gain = if !on || db.abs() < 0.05 { 1.0 } else { 10f64.powf(db as f64 / 20.0) };
         for i in 0..CELLS {
             let c = cells.get(i).map_or(FLAT, coefs);
             self.coefs[i] = c;
@@ -130,7 +147,7 @@ impl Peq {
     }
 
     pub fn is_on(&self) -> bool {
-        self.on && self.active.iter().any(|&a| a)
+        self.on && (self.active.iter().any(|&a| a) || self.gain != 1.0 || self.level != 1.0)
     }
 
     pub fn process(&mut self, frame: [f32; 2]) -> [f32; 2] {
@@ -148,7 +165,14 @@ impl Peq {
                 out[ch] = y;
             }
         }
-        [out[0] as f32, out[1] as f32]
+        if self.level != self.gain {
+            // About 20 ms to get there.
+            self.level += (self.gain - self.level) * 0.002;
+            if (self.level - self.gain).abs() < 1e-5 {
+                self.level = self.gain;
+            }
+        }
+        [(out[0] * self.level) as f32, (out[1] * self.level) as f32]
     }
 }
 
@@ -159,7 +183,7 @@ mod tests {
     /// Gain (dB) a steady tone comes out with.
     fn measured_db(cells: &[Cell], hz: f32) -> f32 {
         let mut eq = Peq::default();
-        eq.set(true, cells);
+        eq.set(true, cells, 0.0);
         let n = SAMPLE_RATE as usize;
         let mut sum = 0.0f64;
         for i in 0..n {
@@ -182,7 +206,7 @@ mod tests {
     #[test]
     fn flat_cells_change_nothing() {
         let mut eq = Peq::default();
-        eq.set(true, &default_cells());
+        eq.set(true, &default_cells(), 0.0);
         assert!(!eq.is_on());
         assert_eq!(eq.process([0.25, -0.5]), [0.25, -0.5]);
     }
@@ -219,8 +243,41 @@ mod tests {
         cells[2].on = false;
         assert!(measured_db(&cells, 1000.0).abs() < 0.01);
         let mut eq = Peq::default();
-        eq.set(false, &one("peak", 1000.0, 9.0, 1.0));
+        eq.set(false, &one("peak", 1000.0, 9.0, 1.0), 6.0);
         assert_eq!(eq.process([0.25, 0.25]), [0.25, 0.25]);
+    }
+
+    #[test]
+    fn output_gain_lifts_everything_after_the_cells_and_glides_there() {
+        let mut eq = Peq::default();
+        eq.set(true, &default_cells(), 6.0);
+        assert!(eq.is_on());
+        let first = eq.process([0.5, 0.5])[0];
+        assert!(first > 0.5 && first < 0.51, "jumped straight to {first}");
+        let mut last = 0.0;
+        for _ in 0..SAMPLE_RATE as usize / 4 {
+            last = eq.process([0.5, -0.5])[0];
+        }
+        assert!((last - 0.5 * 10f32.powf(6.0 / 20.0)).abs() < 1e-3, "{last}");
+        // With a bell too, the gain adds on top of it.
+        let cells = one("peak", 1000.0, 6.0, 1.0);
+        let mut eq = Peq::default();
+        eq.set(true, &cells, -6.0);
+        let n = SAMPLE_RATE as usize;
+        let mut sum = 0.0f64;
+        for i in 0..n {
+            let x = 0.1 * (2.0 * std::f32::consts::PI * 1000.0 * i as f32 / SAMPLE_RATE).sin();
+            let y = eq.process([x, x])[0];
+            if i >= n / 2 {
+                sum += (y as f64).powi(2);
+            }
+        }
+        let db = 20.0 * ((sum / (n / 2) as f64).sqrt() / (0.1 / std::f64::consts::SQRT_2)).log10();
+        assert!(db.abs() < 0.2, "+6 bell and -6 output should cancel, got {db} dB");
+        // Out of range or broken values are held in.
+        let mut eq = Peq::default();
+        eq.set(true, &default_cells(), f32::NAN);
+        assert!(!eq.is_on());
     }
 
     #[test]
