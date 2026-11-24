@@ -36,8 +36,7 @@ SoundTouch - GNU LGPL version 2.1 - https://www.surina.net/soundtouch
 """.replace("{app}", app))
 t.append("OTHER LIBRARIES\n")
 t.append("PipeWire - MIT - https://pipewire.org  (talks to your sound system)\n")
-if pro:
-    t.append("""Opus codec (libopus) - BSD 3-clause - https://opus-codec.org
+t.append("""Opus codec (libopus) - BSD 3-clause - https://opus-codec.org
   Copyright (c) 2001-2023 Xiph.Org, Skype Limited, Octasic, Jean-Marc Valin, Timothy B. Terriberry,
   CSIRO, Gregory Maxwell, Mark Borgerding, Erik de Castro Lopo, Mozilla, Amazon. Built into {app} for Opus
   recordings. Redistribution and use in source and binary forms, with or without modification, are permitted
@@ -45,8 +44,9 @@ if pro:
   (https://opus-codec.org/license/) are kept.
 
 flacenc - Apache 2.0 - https://github.com/yotarok/flacenc-rs  (FLAC recordings)
-
-Lilv, Serd, Sord and Sratom - ISC - https://drobilla.net/software/lilv  (finds and loads LV2 plugins)
+""".replace("{app}", app))
+if pro:
+    t.append("""Lilv, Serd, Sord and Sratom - ISC - https://drobilla.net/software/lilv  (finds and loads LV2 plugins)
   Used as shared libraries from your system (the lilv package), like the LV2 headers (ISC, https://lv2plug.in).
   The plugins you load in the plugin rack are separate programs under their own licences; {app} ships none.
 """.replace("{app}", app))
