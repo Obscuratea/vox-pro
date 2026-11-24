@@ -37,24 +37,36 @@ Rectangle {
     border.color: lit ? app.line2 : checked ? "transparent" : mouse.containsMouse ? app.line2 : app.line
     clip: false
 
-    // An "on" pill gets an accent edge along its bottom that follows the rounded corners: a 2 px rounded outline
-    // of the whole pill, with only its bottom curve showing.
-    Item {
+    // An "on" pill gets an accent edge along its bottom: 2 px under the middle, thinning to nothing as it runs up
+    // the rounded corners. It is the pill's shape minus the same shape lifted by 2 px.
+    Canvas {
+        id: edge
         visible: pill.lit
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: Math.max(3, pill.radius)
-        clip: true
-        Rectangle {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            height: pill.height
-            radius: pill.radius
-            color: "transparent"
-            border.width: 2
-            border.color: pill.app.accent
+        anchors.fill: parent
+        readonly property color tint: pill.app.accent
+        onTintChanged: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        onVisibleChanged: if (visible) requestPaint()
+        function shape(ctx, y) {
+            const w = width, h = height, r = Math.min(pill.radius, w / 2, h / 2);
+            ctx.beginPath();
+            ctx.moveTo(r, y);
+            ctx.arcTo(w, y, w, y + h, r);
+            ctx.arcTo(w, y + h, 0, y + h, r);
+            ctx.arcTo(0, y + h, 0, y, r);
+            ctx.arcTo(0, y, w, y, r);
+            ctx.closePath();
+        }
+        onPaint: {
+            const ctx = getContext("2d");
+            ctx.reset();
+            ctx.fillStyle = tint;
+            shape(ctx, 0);
+            ctx.fill();
+            ctx.globalCompositeOperation = "destination-out";
+            shape(ctx, -2);
+            ctx.fill();
         }
     }
 
