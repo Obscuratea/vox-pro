@@ -41,7 +41,6 @@ fn main() {
         "qml/Themes.qml",
         "qml/Toggle.qml",
         "qml/ToneSlider.qml",
-        "qml/Tray.qml",
     ]))
     .file("src/bridge.rs")
     .build();

@@ -23,3 +23,77 @@ extern "C" void vox_blur_behind(bool on) {
     for (QWindow *w : QGuiApplication::topLevelWindows())
         KWindowEffects::enableBlurBehind(w, on);
 }
+
+// ---- Tray icon ----
+// Qt's widget tray (QSystemTrayIcon + QMenu) rather than Qt.labs.platform's SystemTrayIcon: outside
+// Plasma, the labs tray's D-Bus menu crashed whenever the panel asked for it (seen on niri with
+// noctalia, Qt 6.12). On Plasma both end up as the same StatusNotifierItem, so nothing changes there.
+// The QML owns the state and sends it as JSON (vox_tray_update); clicks come back as events the
+// QML already polls for (vox_push_event, see bridge.rs).
+#include <QAction>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QMenu>
+#include <QSystemTrayIcon>
+
+extern "C" void vox_push_event(const char *name);   // in bridge.rs
+
+namespace {
+struct Tray {
+    QSystemTrayIcon *icon = nullptr;
+    QMenu *menu = nullptr;
+    QAction *showHide = nullptr;
+    QAction *mute = nullptr;
+    QMenu *scenes = nullptr;
+};
+Tray tray;
+
+void ensureTray() {
+    if (tray.icon || QGuiApplication::platformName() == QLatin1String("offscreen")) return;
+    tray.menu = new QMenu;
+    tray.showHide = tray.menu->addAction(QString());
+    QObject::connect(tray.showHide, &QAction::triggered, [] { vox_push_event("show-hide"); });
+    tray.menu->addSeparator();
+    tray.mute = tray.menu->addAction(QString());
+    QObject::connect(tray.mute, &QAction::triggered, [] { vox_push_event("tray-mute"); });
+    tray.scenes = tray.menu->addMenu(QStringLiteral("Scenes"));
+    tray.menu->addSeparator();
+    QObject::connect(tray.menu->addAction(QStringLiteral("Quit")), &QAction::triggered, [] { vox_push_event("tray-quit"); });
+
+    tray.icon = new QSystemTrayIcon;
+    tray.icon->setContextMenu(tray.menu);
+    QObject::connect(tray.icon, &QSystemTrayIcon::activated, [](QSystemTrayIcon::ActivationReason reason) {
+        if (reason == QSystemTrayIcon::Trigger) vox_push_event("show-hide");
+    });
+}
+}
+
+// `json`: {icon, tooltip, showHide, mute, scenes: [{name, active}]}. Shows the tray on first call.
+extern "C" void vox_tray_update(const char *json) {
+    ensureTray();
+    if (!tray.icon) return;
+    const QJsonObject s = QJsonDocument::fromJson(QByteArray(json)).object();
+    tray.icon->setIcon(QIcon::fromTheme(s.value("icon").toString()));
+    tray.icon->setToolTip(s.value("tooltip").toString());
+    tray.showHide->setText(s.value("showHide").toString());
+    tray.mute->setText(s.value("mute").toString());
+
+    const QJsonArray scenes = s.value("scenes").toArray();
+    tray.scenes->clear();
+    for (int i = 0; i < scenes.size(); i++) {
+        const QJsonObject sc = scenes.at(i).toObject();
+        QAction *a = tray.scenes->addAction(sc.value("name").toString());
+        a->setCheckable(true);
+        a->setChecked(sc.value("active").toBool());
+        const QByteArray event = "tray-scene:" + QByteArray::number(i);
+        QObject::connect(a, &QAction::triggered, [event] { vox_push_event(event.constData()); });
+    }
+    tray.scenes->menuAction()->setVisible(!scenes.isEmpty());
+    tray.icon->show();
+}
+
+// Whether there is a tray to put the icon in (a StatusNotifierItem host on Wayland).
+extern "C" bool vox_tray_available() {
+    return QGuiApplication::platformName() != QLatin1String("offscreen") && QSystemTrayIcon::isSystemTrayAvailable();
+}

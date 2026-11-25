@@ -127,6 +127,7 @@ ApplicationWindow {
     property string updateJson: ""
     // Dev aid: a screenshot only captures `page`, so --licences moves the dialog layer into it.
     Component.onCompleted: {
+        mixer.trayUpdate(trayState)
         bootPrefs = { rate: prefs.sample_rate || 48000, latency: prefs.latency || "balanced" }
         reshape()
         if (Qt.application.arguments.indexOf("--licences") >= 0) Overlay.overlay.parent = page
@@ -613,6 +614,12 @@ ApplicationWindow {
                     nextScene();
                 } else if (e === "show-hide") {
                     toggleWindow();
+                } else if (e === "tray-mute") {
+                    muteMics(!micsMuted);
+                } else if (e.startsWith("tray-scene:")) {
+                    applyScene(parseInt(e.slice(11)));
+                } else if (e === "tray-quit") {
+                    quitApp();
                 } else if (e === "screen-locked" && prefs.lock_mute && !micsMuted) {
                     // Settings > Mute mics when the screen locks; they come back on unlock.
                     muteMics(true);
@@ -628,18 +635,26 @@ ApplicationWindow {
     property bool lockMuted: false
 
     // ---- Tray icon: show/hide, mute, scenes, quit ----
-    readonly property bool trayOn: trayLoader.item ? trayLoader.item.available : false
+    // Whether there is a tray to sit in; checked every couple of seconds since the panel can come later.
+    property bool trayOn: false
+    Timer { interval: 2000; repeat: true; running: true; triggeredOnStart: true; onTriggered: win.trayOn = mixer.trayAvailable() }
     function quitApp() { mixer.persist(); Qt.quit(); }
     function toggleWindow() {
         if (visible) { hide(); return; }
         show(); raise(); requestActivate();
     }
-    // Not made under the offscreen test platform, which has no native menus.
-    Loader {
-        id: trayLoader
-        active: Qt.platform.pluginName !== "offscreen"
-        sourceComponent: Component { Tray { app: win } }
-    }
+    // The tray itself is C++ (qt_shim.cpp); this is everything it shows. Clicks come back as events
+    // (show-hide, tray-mute, tray-scene:N, tray-quit), handled with the others below.
+    readonly property bool trayRecording: Object.keys(recordingSince).length > 0
+    readonly property string trayState: JSON.stringify({
+        // Settings > Show a red dot in the tray: the theme's record icon while an output records.
+        icon: trayRecording && prefs.tray_rec_dot !== false ? "media-record" : appName.toLowerCase().replace(" ", "-"),
+        tooltip: trayRecording ? appName + " · recording" : appName,
+        showHide: (visible ? "Hide " : "Show ") + appName,
+        mute: micsMuted ? "Unmute microphones" : "Mute microphones",
+        scenes: scenes.map((sc, i) => ({ name: sc.name, active: sceneActive(i) }))
+    })
+    onTrayStateChanged: mixer.trayUpdate(trayState)
 
     function makeDefault(node, done) {
         status = mixer.makeDefault(node) ? done : "Couldn't change the system default.";

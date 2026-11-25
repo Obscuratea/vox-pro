@@ -2,7 +2,7 @@
 # Lives in packaging/ so makepkg's src/ and pkg/ scratch folders never touch the Rust src/.
 pkgname=vox-pro
 pkgver=0.3.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Voice and audio mixer for PipeWire, with 8 strips, EQ, compressors, limiters and recording (Voicemeeter Potato style)'
 arch=('x86_64')
 license=('custom')
@@ -15,6 +15,12 @@ source=()
 
 build() {
   cd "$startdir/.."
+  # Build for any x86-64 CPU, not just this machine's. makepkg.conf on CachyOS adds -march=native
+  # and target-cpu=native, which put AVX-512 into the binary: it then dies with SIGILL
+  # (illegal instruction) on CPUs without it.
+  export CFLAGS="$(sed -E 's/-m(arch|tune)=[^ ]+//g' <<<"$CFLAGS") -march=x86-64 -mtune=generic"
+  export CXXFLAGS="$(sed -E 's/-m(arch|tune)=[^ ]+//g' <<<"$CXXFLAGS") -march=x86-64 -mtune=generic"
+  export RUSTFLAGS="$(sed -E 's/-C ?target-cpu=[^ ]+//g' <<<"$RUSTFLAGS") -C target-cpu=x86-64"
   cargo build --release --locked
 }
 

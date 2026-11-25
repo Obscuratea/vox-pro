@@ -133,6 +133,14 @@ pub mod qobject {
         #[cxx_name = "blurBehind"]
         fn blur_behind(self: &Mixer, on: bool);
 
+        // The tray icon (qt_shim.cpp): its state as JSON, see vox_tray_update; and whether there is a tray.
+        #[qinvokable]
+        #[cxx_name = "trayUpdate"]
+        fn tray_update(self: &Mixer, json: &QString);
+        #[qinvokable]
+        #[cxx_name = "trayAvailable"]
+        fn tray_available(self: &Mixer) -> bool;
+
         // What Vox itself uses: `{cpu, ram, rate, cycle}`, cpu in % of one core since the last call, ram in MiB,
         // the sample rate and one PipeWire cycle in ms.
         #[qinvokable]
@@ -152,6 +160,19 @@ struct State {
 }
 
 static STATE: OnceLock<State> = OnceLock::new();
+
+/// Called by the tray (qt_shim.cpp, on the Qt thread) when it is clicked: queues `name` for the QML,
+/// which picks events up with takeEvents.
+#[unsafe(no_mangle)]
+pub extern "C" fn vox_push_event(name: *const std::ffi::c_char) {
+    if name.is_null() {
+        return;
+    }
+    let name = unsafe { std::ffi::CStr::from_ptr(name) }.to_string_lossy().into_owned();
+    if let Some(state) = STATE.get() {
+        state.engine.shared.events.lock().unwrap().push(name);
+    }
+}
 
 /// Called once from main before the UI loads.
 pub fn init(engine: Handle, settings: Settings) {
@@ -276,6 +297,16 @@ impl qobject::Mixer {
 
     fn blur_behind(&self, on: bool) {
         unsafe { crate::vox_blur_behind(on) }
+    }
+
+    fn tray_update(&self, json: &qobject::QString) {
+        if let Ok(json) = std::ffi::CString::new(json.to_string()) {
+            unsafe { crate::vox_tray_update(json.as_ptr()) }
+        }
+    }
+
+    fn tray_available(&self) -> bool {
+        unsafe { crate::vox_tray_available() }
     }
 
     fn usage(&self) -> qobject::QString {

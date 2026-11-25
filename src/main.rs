@@ -41,6 +41,8 @@ unsafe extern "C" {
     fn vox_app_new(argc: i32, argv: *mut *mut c_char, name: *const c_char);
     fn vox_app_exec() -> i32;
     pub fn vox_blur_behind(on: bool);
+    pub fn vox_tray_update(json: *const c_char);
+    pub fn vox_tray_available() -> bool;
 }
 
 fn main() {
