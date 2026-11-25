@@ -35,35 +35,46 @@ Item {
           Rectangle {
             id: pill
             property var modelData: slot.modelData
-            property var stream: slot.modelData     // what a DropArea reads from the dragged pill
             width: slot.width
             height: slot.height
             radius: list.app.diamond ? 0 : height / 2
             color: list.app.soft ? list.app.tonal : list.app.hover
             border.color: list.app.edge
-            opacity: modelData.muted ? 0.6 : 1
+            opacity: modelData.muted ? 0.6 : (dragArea.drag.active ? 0.35 : 1)
 
-            // Drag a playing program onto the Apps or Media strip to send it there. While dragging, the pill
-            // moves to the window overlay so it isn't clipped by the list.
-            Drag.active: dragArea.drag.active
-            Drag.keys: ["vox-stream"]
-            Drag.hotSpot.x: width / 2
-            Drag.hotSpot.y: height / 2
-            states: State {
-                when: dragArea.drag.active
-                ParentChange { target: pill; parent: Overlay.overlay }
+            // Drag a playing program onto the Apps or Media strip to send it there. The pill itself stays put;
+            // what moves is a picture of it on the window overlay, so it isn't clipped by the list and has
+            // nothing to put back afterwards.
+            Item {
+                id: ghost
+                parent: pill.Overlay.overlay
+                property var stream: slot.modelData     // what a DropArea reads from the dragged item
+                width: pill.width
+                height: pill.height
+                visible: dragArea.drag.active
+                Drag.active: dragArea.drag.active
+                Drag.keys: ["vox-stream"]
+                ShaderEffectSource {
+                    anchors.fill: parent
+                    sourceItem: ghost.visible ? pill : null
+                    hideSource: false
+                }
             }
             MouseArea {
                 id: dragArea
                 anchors.fill: parent
                 enabled: list.mutable
                 cursorShape: list.mutable ? (drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor) : Qt.ArrowCursor
-                drag.target: pill
-                onReleased: pill.Drag.drop()
-            }
-            Connections {
-                target: dragArea.drag
-                function onActiveChanged() { if (!dragArea.drag.active) { pill.x = 0; pill.y = 0; } }
+                drag.target: ghost
+                // Start the picture exactly over the pill; the drag moves it from there. It drops where the
+                // pointer is (the spot it was grabbed by), not at its middle, which can be far off on a wide pill.
+                onPressed: mouse => {
+                    const p = pill.mapToItem(ghost.parent, 0, 0);
+                    ghost.x = p.x;
+                    ghost.y = p.y;
+                    ghost.Drag.hotSpot = Qt.point(mouse.x, mouse.y);
+                }
+                onReleased: if (drag.active) ghost.Drag.drop()
             }
 
             RowLayout {
