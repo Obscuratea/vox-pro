@@ -127,6 +127,10 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "moveStream"]
         fn move_stream(self: &Mixer, id: i32, target: &QString);
+        // Undo moveStream: the stream goes back to where it would play by itself.
+        #[qinvokable]
+        #[cxx_name = "sendBack"]
+        fn send_back(self: &Mixer, id: i32);
 
         // Glass themes: ask the compositor to blur the desktop behind the see-through window.
         #[qinvokable]
@@ -343,6 +347,10 @@ impl qobject::Mixer {
         if bus >= 0 {
             let _ = state().engine.sender.lock().unwrap().send(Command::Record(bus as usize, on));
         }
+    }
+
+    fn send_back(&self, id: i32) {
+        let _ = state().engine.sender.lock().unwrap().send(Command::SendBack(id as u32));
     }
 
     fn move_stream(&self, id: i32, target: &qobject::QString) {

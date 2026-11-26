@@ -494,6 +494,10 @@ ApplicationWindow {
     function muteStream(id, muted) {
         mixer.muteStream(id, muted);
     }
+    function sendBack(id, label) {
+        mixer.sendBack(id);
+        flash("Sent " + label + " back");
+    }
     function moveStream(id, target, label) {
         mixer.moveStream(id, target);
         flash("Sent to " + label);

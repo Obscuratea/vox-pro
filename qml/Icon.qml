@@ -54,6 +54,15 @@ Canvas {
             c.beginPath(); c.arc(12, 13, 8, Math.PI, 2 * Math.PI); c.stroke();
             box(3, 13, 4, 7, 1.6); box(17, 13, 4, 7, 1.6);
             break;
+        case "speaker":
+            line([4, 9.5, 8, 9.5, 13, 5, 13, 19, 8, 14.5, 4, 14.5, 4, 9.5]);
+            c.beginPath(); c.arc(14, 12, 4.5, -Math.PI / 4, Math.PI / 4); c.stroke();
+            c.beginPath(); c.arc(14, 12, 8, -Math.PI / 4, Math.PI / 4); c.stroke();
+            break;
+        case "back":
+            c.beginPath(); c.moveTo(19, 18); c.lineTo(19, 13); c.arcTo(19, 9, 15, 9, 4); c.lineTo(5, 9); c.stroke();
+            line([9, 5, 5, 9, 9, 13]);
+            break;
         case "send":
             line([4, 12, 19, 12]); line([14, 7, 19, 12, 14, 17]);
             break;

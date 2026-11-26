@@ -10,6 +10,9 @@ Item {
     required property string target
     property bool mutable: true
     property string emptyText: "Nothing playing"
+    // Streams in one of our strips can be sent back to where they would play by themselves (a sound card's
+    // channel outputs to the card, a program to the default device): the button, or dragging out of the list.
+    readonly property bool canSendBack: mutable && target !== "other"
     readonly property var items: app.streams.filter(s => s.target === target)
 
     Text {
@@ -74,7 +77,18 @@ Item {
                     ghost.y = p.y;
                     ghost.Drag.hotSpot = Qt.point(mouse.x, mouse.y);
                 }
-                onReleased: if (drag.active) ghost.Drag.drop()
+                onReleased: mouse => {
+                    if (!drag.active) return;
+                    // Over a strip? (Drag.target is the DropArea under the pointer; the strips take the drop
+                    // without accepting it, so drop()'s result can't tell.)
+                    const accepted = ghost.Drag.target !== null;
+                    ghost.Drag.drop();
+                    // Let go outside the list and not on a strip: send it back.
+                    const p = dragArea.mapToItem(list, mouse.x, mouse.y);
+                    const outside = p.x < 0 || p.y < 0 || p.x > list.width || p.y > list.height;
+                    if (!accepted && outside && list.canSendBack)
+                        list.app.sendBack(pill.modelData.id, pill.modelData.name);
+                }
             }
 
             RowLayout {
@@ -88,9 +102,16 @@ Item {
                     Layout.preferredWidth: 22
                     Layout.preferredHeight: 22
                     radius: 11
-                    color: pill.modelData.icon !== "" ? "transparent" : Qt.alpha(list.app.accent, 0.25)
+                    color: pill.modelData.icon !== "" && !pill.modelData.device ? "transparent" : Qt.alpha(list.app.accent, 0.25)
+                    Icon {
+                        visible: !!pill.modelData.device
+                        anchors.centerIn: parent
+                        width: 14; height: 14
+                        name: "speaker"
+                        color: list.app.ink
+                    }
                     Text {
-                        visible: pill.modelData.icon === ""
+                        visible: pill.modelData.icon === "" && !pill.modelData.device
                         anchors.centerIn: parent
                         text: pill.modelData.name.charAt(0).toUpperCase()
                         color: list.app.ink
@@ -98,6 +119,7 @@ Item {
                         font.weight: Font.Bold
                     }
                     Image {
+                        visible: !pill.modelData.device
                         anchors.fill: parent
                         source: pill.modelData.icon
                         sourceSize: Qt.size(44, 44)
@@ -112,6 +134,18 @@ Item {
                     font.pixelSize: 12
                     elide: Text.ElideRight
                     font.strikeout: pill.modelData.muted
+                }
+                IconButton {
+                    visible: list.canSendBack
+                    app: list.app
+                    icon: "back"
+                    quiet: true
+                    implicitWidth: 24
+                    implicitHeight: 24
+                    radius: 12
+                    tip: pill.modelData.device ? "Send " + pill.modelData.name + " back to its sound card"
+                                               : "Send " + pill.modelData.name + " back to the default output"
+                    onClicked: list.app.sendBack(pill.modelData.id, pill.modelData.name)
                 }
                 Chip {
                     visible: list.mutable
