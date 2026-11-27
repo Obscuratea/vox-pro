@@ -3,7 +3,7 @@
 [![Tests](https://github.com/Obscuratea/vox-pro/actions/workflows/tests.yml/badge.svg)](https://github.com/Obscuratea/vox-pro/actions/workflows/tests.yml)
 
 Audio mixer and router for Linux (PipeWire) with a plugin rack. Rust + Qt Quick. Not affiliated with
-VB-Audio. The smaller version is [Vox Obscurus](https://github.com/Obscuratea/vox-obscurus).
+VB-Audio. The smaller version is [Vox](https://github.com/Obscuratea/vox-obscurus).
 
 Made by [Obscuratea](https://github.com/Obscuratea), who designs Vox Pro, decides what it does and how it
 looks, tests every release and publishes it. The code is written with Claude Code (an AI coding tool);
@@ -25,12 +25,12 @@ looks, tests every release and publishes it. The code is written with Claude Cod
 
 ## Features
 
-Everything in Vox Obscurus, plus:
+Everything in Vox, plus:
 
 - Up to 6 hardware inputs, 8 virtual inputs, 6 A outputs and 4 B virtual mics.
 - Plugin rack: LV2, CLAP and VST3, up to six per channel, FX switch to bypass the chain.
 
-Shared with Vox Obscurus:
+Shared with Vox:
 
 - Noise gate, bass, brightness, pitch and auto-duck on hardware inputs.
 - Parametric EQ on every channel, compressor on every input, limiter on every output.
@@ -60,6 +60,16 @@ distributions do: Fedora, Bazzite, SteamOS, Arch and CachyOS, Ubuntu 24.04 and n
 newer, Debian 13. Systems that still use PulseAudio (for example Ubuntu 22.04 or Linux Mint 21) are not
 supported. To check, run `pactl info | grep "Server Name"`: it should mention PipeWire.
 
+Hardware:
+
+- A 64-bit x86 PC (x86-64). ARM devices such as a Raspberry Pi or Snapdragon laptops are not supported yet.
+- Graphics with OpenGL 2.1 or newer (integrated graphics are fine).
+- About 300 MB of free memory.
+- Room on screen for a 360 × 480 window.
+
+Vox Pro works on sound in real time. On a current desktop CPU it uses about 1–2 %; slower CPUs, more
+channels and effects, or a lower latency setting use more. Plugins add their own CPU and memory use.
+
 ## Install
 
 Download `vox-pro-*-x86_64.pkg.tar.zst` from the
@@ -73,7 +83,7 @@ Needs Rust, clang, cmake, Qt 6 (base, declarative, widgets), KWindowSystem, Pipe
 
     cargo run --release
 
-Settings: `~/.config/vox-pro/settings.json` (plus a `.bak`). Run Vox Pro or Vox Obscurus, not both.
+Settings: `~/.config/vox-pro/settings.json` (plus a `.bak`). Run Vox Pro or Vox, not both.
 
 ## Support
 

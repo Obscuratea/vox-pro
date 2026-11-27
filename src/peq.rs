@@ -1,5 +1,5 @@
 //! Parametric EQ: six cells in series, each a biquad (RBJ cookbook) with its own type, frequency, gain and Q.
-//! The same file is used by Vox Obscurus and Vox Pro. qml/PeqEditor.qml draws the curve with the same formulas.
+//! The same file is used by Vox and Vox Pro. qml/PeqEditor.qml draws the curve with the same formulas.
 
 use crate::dsp::sample_rate;
 use serde::{Deserialize, Serialize};

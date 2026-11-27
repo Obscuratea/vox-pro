@@ -19,7 +19,7 @@ ApplicationWindow {
                                 && Qt.application.arguments.indexOf("--screenshot") < 0
     Timer { id: trayCheck; interval: 2500; running: win.launchHidden; onTriggered: if (!win.trayOn) { win.launchHidden = false; win.show(); } }
     title: appName
-    // Which app this is. Every QML file but this one is the same in Vox Obscurus and Vox Pro; they ask these.
+    // Which app this is. Every QML file but this one is the same in Vox and Vox Pro; they ask these.
     readonly property bool pro: true
     readonly property string appName: "Vox Pro"
     readonly property string nodePrefix: "vox_pro_"

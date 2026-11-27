@@ -13,7 +13,7 @@ mod shortcuts;
 mod stretch;
 mod updater;
 
-/// Which app this build is; code shared by Vox Obscurus and Vox Pro asks these.
+/// Which app this build is; code shared by Vox and Vox Pro asks these.
 pub const APP_NAME: &str = "Vox Pro";
 pub const APP_ID: &str = "vox-pro";
 
