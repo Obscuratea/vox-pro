@@ -50,6 +50,9 @@ Obscuratea also tests by hand:
   `Scripts/watch_usage.sh 60` watches for an hour.
 - **The code**: read through for anything that looks clearly wrong before it goes out.
 
+Last CPU and memory check: Vox 0.3.2 on CachyOS with niri, 32 minutes in normal use. CPU averaged 2.7% of
+one core (3.4% at most); memory stayed at 241.2 MB the whole time, with no growth.
+
 Each release is installed and used on a real desktop before it is published. Some changes go out
 first as test builds (GitHub pre-releases) to testers. Release notes list the systems a release was
 tested on (OS and desktop).
