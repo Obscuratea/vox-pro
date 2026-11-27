@@ -207,6 +207,7 @@ ApplicationWindow {
     property var cfg: JSON.parse(mixer.settings())
     // Set while PipeWire can't be reached (see Mixer::engineStatus); shown in place of the status pill.
     property string engineError: ""
+    property string pipewireProblem: ""
     // No point redrawing meters and program lists for a window nobody can see.
     readonly property bool awake: visibility !== Window.Minimized && visibility !== Window.Hidden
     property var devices: ({ sources: [], sinks: [] })
@@ -687,6 +688,7 @@ ApplicationWindow {
         triggeredOnStart: true
         onTriggered: {
             win.engineError = mixer.engineStatus();
+            win.pipewireProblem = mixer.pipewireProblem();
             win.pollRecording();
             const json = mixer.devices();
             if (json !== win.devicesJson) {
@@ -1312,6 +1314,42 @@ ApplicationWindow {
                         font.pixelSize: 11
                     }
                 }
+            }
+        }
+    }
+    // PipeWire missing or too old: nothing in the mixer can work, so cover it with why and what to do.
+    Rectangle {
+        anchors.fill: parent
+        visible: win.pipewireProblem !== ""
+        z: 1000
+        color: win.bg
+        MouseArea { anchors.fill: parent; hoverEnabled: true }
+        Column {
+            anchors.centerIn: parent
+            width: Math.min(parent.width - 48, 460)
+            spacing: 14
+            Text {
+                width: parent.width
+                text: win.pipewireProblem === "missing" ? win.appName + " needs PipeWire" : "PipeWire is too old"
+                color: win.ink
+                font.pixelSize: 22
+                font.weight: Font.DemiBold
+                wrapMode: Text.WordWrap
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                color: win.dim
+                font.pixelSize: 14
+                lineHeight: 1.2
+                text: win.pipewireProblem === "missing"
+                      ? win.appName + " couldn't connect to PipeWire, the sound system it works with. Your system may use PulseAudio instead (for example Ubuntu 22.04 or Linux Mint 21), or PipeWire isn't running.\n\n" + win.appName + " needs PipeWire 0.3.77 or newer with WirePlumber."
+                      : "This system has PipeWire " + win.pipewireProblem.replace("old ", "") + ". " + win.appName + " needs 0.3.77 or newer. A newer release of your distribution (for example Debian 13 or Ubuntu 24.04) has it."
+            }
+            Row {
+                spacing: 10
+                TextButton { app: win; text: "How to switch"; tip: "https://github.com/Obscuratea/vox-pro#requirements"; onClicked: Qt.openUrlExternally("https://github.com/Obscuratea/vox-pro#requirements") }
+                TextButton { app: win; text: "Quit"; onClicked: Qt.quit() }
             }
         }
     }

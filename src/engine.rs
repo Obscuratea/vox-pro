@@ -89,6 +89,9 @@ pub struct Shared {
     pub streams: Mutex<String>,
     /// Set when the PipeWire connection can't be made or is lost; the UI shows it. Empty when all is well.
     pub status: Mutex<String>,
+    /// "missing" when PipeWire can't be reached, "old <version>" when it is older than MIN_PIPEWIRE, else empty.
+    /// The UI then covers the mixer with an explanation.
+    pub pipewire: Mutex<String>,
     /// True while the push-to-talk key is held (set by the shortcut listener).
     pub ptt_held: AtomicBool,
     /// Things the desktop asked for that the UI has to carry out (e.g. "mute-mics"), oldest first.
@@ -110,6 +113,7 @@ impl Shared {
             own_nodes: Mutex::default(),
             streams: Mutex::new("[]".into()),
             status: Mutex::default(),
+            pipewire: Mutex::default(),
             ptt_held: AtomicBool::new(false),
             events: Mutex::default(),
             recording: Mutex::new(vec![String::new(); Settings::default().buses.len()]),
@@ -152,12 +156,35 @@ pub struct Handle {
 /// Frames per cycle Vox asks PipeWire for (the Latency setting), fixed at start like the rate.
 static QUANTUM: AtomicU32 = AtomicU32::new(256);
 
+/// The oldest PipeWire Vox works with: it calls functions added in 0.3.77.
+pub const MIN_PIPEWIRE: (u32, u32, u32) = (0, 3, 77);
+
+/// The version of the libpipewire this process loaded, e.g. "1.6.11".
+fn pipewire_library_version() -> String {
+    // SAFETY: pw_get_library_version returns a static, NUL-terminated string; it has existed since PipeWire 0.2.
+    unsafe { std::ffi::CStr::from_ptr(pw::sys::pw_get_library_version()) }.to_string_lossy().into_owned()
+}
+
+/// True if a version such as "1.0.5" or "0.3.65-1" is at least `min`.
+pub fn version_at_least(version: &str, min: (u32, u32, u32)) -> bool {
+    let mut parts = version.split(|c: char| !c.is_ascii_digit()).filter(|s| !s.is_empty()).map(|s| s.parse::<u32>().unwrap_or(0));
+    (parts.next().unwrap_or(0), parts.next().unwrap_or(0), parts.next().unwrap_or(0)) >= min
+}
+
 pub fn start(settings: Settings) -> Handle {
     // The rate and buffer are only read here: the streams and every filter are built for them.
     crate::dsp::set_sample_rate(settings.prefs.sample_rate);
     QUANTUM.store(settings.prefs.quantum(), Ordering::Relaxed);
     let shared = Arc::new(Shared::new());
     let (sender, receiver) = pw::channel::channel();
+    // Too old a libpipewire lacks functions Vox calls, so the engine would crash: say so and don't start it.
+    let library = pipewire_library_version();
+    if !version_at_least(&library, MIN_PIPEWIRE) {
+        eprintln!("vox: PipeWire {library} is older than {}.{}.{}", MIN_PIPEWIRE.0, MIN_PIPEWIRE.1, MIN_PIPEWIRE.2);
+        *shared.pipewire.lock().unwrap() = format!("old {library}");
+        *shared.status.lock().unwrap() = format!("PipeWire {library} is too old");
+        return Handle { shared, sender: Mutex::new(sender) };
+    }
     let thread_shared = shared.clone();
     let thread_sender = sender.clone();
     std::thread::Builder::new()
@@ -167,6 +194,7 @@ pub fn start(settings: Settings) -> Handle {
                 eprintln!("vox-pro: PipeWire engine stopped: {e}");
                 *thread_shared.status.lock().unwrap() =
                     "Can't reach PipeWire. Is it running? Restart Vox once it is.".into();
+                *thread_shared.pipewire.lock().unwrap() = "missing".into();
             }
         })
         .expect("failed to start the audio thread");
@@ -1262,6 +1290,16 @@ fn run(
     let barrier = core.sync(0)?;
     let _core_listener = core
         .add_listener_local()
+        .info({
+            let shared = shared.clone();
+            move |info| {
+                let server = info.version();
+                if !version_at_least(server, MIN_PIPEWIRE) {
+                    eprintln!("vox: the PipeWire server is {server}, older than {}.{}.{}", MIN_PIPEWIRE.0, MIN_PIPEWIRE.1, MIN_PIPEWIRE.2);
+                    *shared.pipewire.lock().unwrap() = format!("old {server}");
+                }
+            }
+        })
         .done({
             let (core, mixer, streams, devices, ready, present, first) =
                 (core.clone(), mixer.clone(), streams.clone(), devices.clone(), ready.clone(), present.clone(), first_settings.clone());
@@ -1367,6 +1405,18 @@ fn run(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn pipewire_versions_compare_by_number() {
+        use super::{version_at_least, MIN_PIPEWIRE};
+        assert!(version_at_least("0.3.77", MIN_PIPEWIRE));
+        assert!(version_at_least("1.0.5", MIN_PIPEWIRE));
+        assert!(version_at_least("1.6.11", MIN_PIPEWIRE));
+        assert!(version_at_least("0.3.100", MIN_PIPEWIRE), "by number, not as text");
+        assert!(!version_at_least("0.3.65", MIN_PIPEWIRE), "Debian 12");
+        assert!(!version_at_least("0.3.48-1ubuntu3", MIN_PIPEWIRE), "Ubuntu 22.04");
+        assert!(!version_at_least("", MIN_PIPEWIRE));
+    }
+
     use super::*;
 
     /// Feed a steady tone through strip 0 the way PipeWire does (256-frame cycles) with pitch on:

@@ -15,7 +15,7 @@ push; each run and its full log are public on the
 
 | Area | What is checked |
 | --- | --- |
-| Engine | Mono and Dim, solo, push to talk, auto-duck and its recovery, the limiter ceiling, removing a channel while others keep playing, telling devices apart from Vox's own streams |
+| Engine | The PipeWire version check (old Debian and Ubuntu versions are refused), Mono and Dim, solo, push to talk, auto-duck and its recovery, the limiter ceiling, removing a channel while others keep playing, telling devices apart from Vox's own streams |
 | Effects | Compressor ratio, pitch shift (octaves, no dropouts at other buffer sizes), the strip EQ |
 | Parametric EQ | Bells, shelves, pass filters and notch, cells that are off, output gain, old saves brought into range |
 | Plugins | A missing plugin leaves a silent slot and the sound untouched, dropped plugins are checked before they are copied, external plugins are told apart from LV2 ones, saved slots are cleaned up |

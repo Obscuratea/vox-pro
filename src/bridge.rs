@@ -52,6 +52,11 @@ pub mod qobject {
         #[cxx_name = "engineStatus"]
         fn engine_status(self: &Mixer) -> QString;
 
+        // "missing" or "old <version>" when PipeWire can't be used; empty when it is fine.
+        #[qinvokable]
+        #[cxx_name = "pipewireProblem"]
+        fn pipewire_problem(self: &Mixer) -> QString;
+
         // The program's version, and the text of THIRD_PARTY.txt (the credits and licences shown in About).
         #[qinvokable]
         fn version(self: &Mixer) -> QString;
@@ -384,6 +389,10 @@ impl qobject::Mixer {
 
     fn engine_status(&self) -> qobject::QString {
         qobject::QString::from(&*state().engine.shared.status.lock().unwrap())
+    }
+
+    fn pipewire_problem(&self) -> qobject::QString {
+        qobject::QString::from(&*state().engine.shared.pipewire.lock().unwrap())
     }
 
     fn scheme_accent(&self) -> qobject::QString {
