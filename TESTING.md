@@ -41,6 +41,15 @@ Five tests need a running desktop or installed plugins, so the automatic runs sk
 - a real LV2 plugin loads, runs and obeys its controls (needs the plugin installed)
 - every installed external plugin loads and runs
 
+Obscuratea also tests by hand:
+
+- **CPU use over time**: watched with `Scripts/watch_usage.sh` while Vox Pro runs, to see that it stays low and steady.
+- **Memory**: watched with the same script for leaks (memory that keeps growing). It samples the
+  program's CPU time and resident memory from `/proc` every few seconds, saves them to a CSV file, and at
+  the end shows average CPU and how much memory grew per hour. Anyone can run it:
+  `Scripts/watch_usage.sh 60` watches for an hour.
+- **The code**: read through for anything that looks clearly wrong before it goes out.
+
 Each release is installed and used on a real desktop before it is published. Some changes go out
 first as test builds (GitHub pre-releases) to testers. Release notes list the systems a release was
 tested on (OS and desktop).

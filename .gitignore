@@ -6,3 +6,4 @@
 /release
 /packaging/*.sha256
 aqtinstall.log
+*-usage-*.csv
