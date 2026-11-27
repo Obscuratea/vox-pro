@@ -1,5 +1,7 @@
 //! "Check for updates" and "Update": looks at the newest GitHub release, and on request downloads its
 //! package, checks it and installs it with pacman (the desktop asks for your password through polkit).
+//! Run as an AppImage, it downloads the new AppImage instead and puts it in place of the running file
+//! (no password: the file is the user's own).
 //! Settings live in ~/.config and are never touched. All the slow work runs on a thread; the UI polls
 //! `status_json()`.
 
@@ -49,6 +51,11 @@ fn set(state: &'static str, message: impl Into<String>) {
     });
 }
 
+/// The AppImage this process runs from, if it is one: the AppImage runtime sets APPIMAGE to its path.
+fn appimage() -> Option<PathBuf> {
+    std::env::var_os("APPIMAGE").map(PathBuf::from).filter(|p| p.is_file())
+}
+
 /// Is `a` a newer version than `b`? Compares the numbers in "1.2.3" (a leading "v" is ignored).
 pub fn newer(a: &str, b: &str) -> bool {
     let parts = |v: &str| -> Vec<u64> {
@@ -93,7 +100,7 @@ pub fn check() {
     set("checking", "");
     std::thread::spawn(|| {
         let api = dev_api().unwrap_or_else(|| format!("https://api.github.com/repos/{REPO}/releases/latest"));
-        match curl_text(&api).and_then(|text| parse_release(&text)) {
+        match curl_text(&api).and_then(|text| parse_release(&text, appimage().is_some())) {
             Ok(Some(found)) => with(|s| {
                 s.state = "available";
                 s.latest = found.latest;
@@ -118,7 +125,8 @@ struct Found {
     size: u64,
 }
 
-fn parse_release(text: &str) -> Result<Option<Found>, String> {
+/// `appimage`: look for the release's AppImage rather than its pacman package.
+fn parse_release(text: &str, appimage: bool) -> Result<Option<Found>, String> {
     let json: serde_json::Value = serde_json::from_str(text).map_err(|_| "GitHub's answer wasn't understood.".to_string())?;
     let tag = json["tag_name"].as_str().ok_or("That release has no version.")?;
     let latest = tag.trim_start_matches('v').to_string();
@@ -127,8 +135,11 @@ fn parse_release(text: &str) -> Result<Option<Found>, String> {
     }
     let assets = json["assets"].as_array().cloned().unwrap_or_default();
     let pick = |matches: &dyn Fn(&str) -> bool| assets.iter().find(|a| a["name"].as_str().is_some_and(matches));
-    let pkg = pick(&|n| n.ends_with(".pkg.tar.zst") && n.contains("x86_64"))
-        .ok_or("That release has no package to install yet.")?;
+    let pkg = if appimage {
+        pick(&|n| n.ends_with(".AppImage") && n.contains("x86_64")).ok_or("That release has no AppImage yet.")?
+    } else {
+        pick(&|n| n.ends_with(".pkg.tar.zst") && n.contains("x86_64")).ok_or("That release has no package to install yet.")?
+    };
     let pkg_name = pkg["name"].as_str().unwrap_or_default().to_string();
     let url = pkg["browser_download_url"].as_str().unwrap_or_default().to_string();
     // Only ever download from this project's own releases.
@@ -200,6 +211,15 @@ pub fn install() {
             if expected.len() != 64 || expected != actual {
                 return Err("The download didn't match its checksum, so it was not installed.".into());
             }
+            if let Some(target) = appimage() {
+                if cfg!(debug_assertions) && std::env::var_os("VOX_UPDATE_DRY_RUN").is_some() {
+                    return Err("dry run: downloaded and verified, not installed".into());
+                }
+                set("installing", "");
+                let result = replace_appimage(&file, &target);
+                let _ = std::fs::remove_dir_all(&dir);
+                return result;
+            }
             // It must really be this program's package.
             let info = Command::new("pacman").arg("-Qp").arg(&file).output().map_err(|e| e.to_string())?;
             if String::from_utf8_lossy(&info.stdout).split_whitespace().next() != Some(PACKAGE) {
@@ -236,9 +256,36 @@ pub fn install() {
     });
 }
 
+/// True if `bytes` start like an AppImage (type 2): an ELF file with "AI" and 2 at offset 8.
+fn looks_like_appimage(bytes: &[u8]) -> bool {
+    bytes.len() >= 11 && bytes[..4] == *b"\x7fELF" && bytes[8..11] == *b"AI\x02"
+}
+
+/// Put the downloaded AppImage in place of the running one. It is copied next to the target first and then
+/// renamed over it, so the swap is all-or-nothing; the running program keeps its old copy until it quits.
+fn replace_appimage(new: &std::path::Path, target: &std::path::Path) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+    let mut head = [0u8; 16];
+    let n = std::fs::File::open(new).and_then(|mut f| f.read(&mut head)).map_err(|e| e.to_string())?;
+    if !looks_like_appimage(&head[..n]) {
+        return Err("The download isn't an AppImage, so it was not installed.".into());
+    }
+    let dir = target.parent().ok_or("The AppImage's folder wasn't found.")?;
+    let staged = dir.join(format!(".{PACKAGE}-update.AppImage"));
+    let cant = |e: std::io::Error| format!("Can't write to {}: {e}", dir.display());
+    std::fs::copy(new, &staged).map_err(cant)?;
+    std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o755)).map_err(cant)?;
+    std::fs::rename(&staged, target).map_err(|e| {
+        let _ = std::fs::remove_file(&staged);
+        cant(e)
+    })
+}
+
 /// Start the (new) program in a moment, once this one has quit.
 pub fn restart() {
-    let _ = Command::new("sh").args(["-c", &format!("sleep 1; exec {PACKAGE}")]).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn();
+    let program = appimage().map(|p| p.display().to_string()).unwrap_or_else(|| PACKAGE.to_string());
+    let quoted = format!("'{}'", program.replace('\'', "'\\''"));
+    let _ = Command::new("sh").args(["-c", &format!("sleep 1; exec {quoted}")]).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn();
 }
 
 #[cfg(test)]
@@ -291,12 +338,44 @@ mod tests {
         let url = format!("https://github.com/{REPO}/releases/download/v9.0.0");
         let pkg = format!(r#"{{"name":"{PACKAGE}-9.0.0-1-x86_64.pkg.tar.zst","browser_download_url":"{url}/p.pkg.tar.zst","size":5}}"#);
         let sha = format!(r#"{{"name":"{PACKAGE}-9.0.0-1-x86_64.pkg.tar.zst.sha256","browser_download_url":"{url}/p.sha256"}}"#);
-        let found = parse_release(&json(&format!("[{pkg},{sha}]"))).unwrap().expect("newer release is found");
+        let found = parse_release(&json(&format!("[{pkg},{sha}]")), false).unwrap().expect("newer release is found");
         assert_eq!((found.latest.as_str(), found.size), ("9.0.0", 5));
-        assert!(parse_release(&json(&format!("[{pkg}]"))).is_err(), "no checksum: not installable");
-        assert!(parse_release(&json("[]")).is_err(), "no package: not installable");
+        assert!(parse_release(&json(&format!("[{pkg}]")), false).is_err(), "no checksum: not installable");
+        assert!(parse_release(&json("[]"), false).is_err(), "no package: not installable");
         let evil = pkg.replace("https://github.com/", "https://example.com/");
-        assert!(parse_release(&json(&format!("[{evil},{sha}]"))).is_err(), "foreign download host is refused");
-        assert!(parse_release(r#"{"tag_name":"v0.0.1","assets":[]}"#).unwrap().is_none(), "older: nothing to do");
+        assert!(parse_release(&json(&format!("[{evil},{sha}]")), false).is_err(), "foreign download host is refused");
+        assert!(parse_release(r#"{"tag_name":"v0.0.1","assets":[]}"#, false).unwrap().is_none(), "older: nothing to do");
+    }
+
+    #[test]
+    fn an_appimage_updates_from_the_appimage_and_its_checksum() {
+        let json = |assets: &str| format!(r#"{{"tag_name":"v9.0.0","body":"","assets":{assets}}}"#);
+        let url = format!("https://github.com/{REPO}/releases/download/v9.0.0");
+        let pkg = format!(r#"{{"name":"{PACKAGE}-9.0.0-1-x86_64.pkg.tar.zst","browser_download_url":"{url}/p.pkg.tar.zst","size":5}}"#);
+        let img = format!(r#"{{"name":"{PACKAGE}-9.0.0-x86_64.AppImage","browser_download_url":"{url}/v.AppImage","size":7}}"#);
+        let sha = format!(r#"{{"name":"{PACKAGE}-9.0.0-x86_64.AppImage.sha256","browser_download_url":"{url}/v.sha256"}}"#);
+        let found = parse_release(&json(&format!("[{pkg},{img},{sha}]")), true).unwrap().expect("found");
+        assert_eq!((found.url.as_str(), found.size), (format!("{url}/v.AppImage").as_str(), 7), "picks the AppImage, not the package");
+        assert!(parse_release(&json(&format!("[{pkg}]")), true).is_err(), "a release without an AppImage is not offered");
+    }
+
+    #[test]
+    fn only_an_appimage_replaces_the_appimage() {
+        let dir = std::env::temp_dir().join(format!("vox-appimage-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let target = dir.join("Vox.AppImage");
+        std::fs::write(&target, b"old").unwrap();
+        let fake = dir.join("fake");
+        std::fs::write(&fake, b"<html>not found</html>").unwrap();
+        assert!(replace_appimage(&fake, &target).is_err(), "a web page is refused");
+        assert_eq!(std::fs::read(&target).unwrap(), b"old", "and the old file is untouched");
+        let real = dir.join("real");
+        std::fs::write(&real, b"\x7fELF\x02\x01\x01\x00AI\x02rest of the file").unwrap();
+        replace_appimage(&real, &target).unwrap();
+        assert!(std::fs::read(&target).unwrap().starts_with(b"\x7fELF"));
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(std::fs::metadata(&target).unwrap().permissions().mode() & 0o777, 0o755, "runnable");
+        assert!(!dir.join(format!(".{PACKAGE}-update.AppImage")).exists(), "nothing left behind");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

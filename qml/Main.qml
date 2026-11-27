@@ -653,7 +653,7 @@ ApplicationWindow {
     readonly property bool trayRecording: Object.keys(recordingSince).length > 0
     readonly property string trayState: JSON.stringify({
         // Settings > Show a red dot in the tray: the theme's record icon while an output records.
-        icon: trayRecording && prefs.tray_rec_dot !== false ? "media-record" : appName.toLowerCase().replace(" ", "-"),
+        icon: trayRecording && prefs.tray_rec_dot !== false ? "media-record" : "vox-pro",   // the installed icon's name (the app id), not the display name
         tooltip: trayRecording ? appName + " · recording" : appName,
         showHide: (visible ? "Hide " : "Show ") + appName,
         mute: micsMuted ? "Unmute microphones" : "Mute microphones",

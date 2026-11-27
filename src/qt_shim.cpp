@@ -6,7 +6,9 @@
 #include <QGuiApplication>
 #include <QWindow>
 #include <QQuickWindow>
+#ifndef VOX_NO_KWINDOWSYSTEM
 #include <KWindowEffects>
+#endif
 
 extern "C" void vox_app_new(int argc, char **argv, const char *name) {
     static int stored_argc = argc;   // QApplication keeps references to these, so they must outlive it
@@ -19,9 +21,15 @@ extern "C" void vox_app_new(int argc, char **argv, const char *name) {
 extern "C" int vox_app_exec() { return QApplication::exec(); }
 
 // Glass themes: have the compositor blur the desktop behind the window (KWin's blur effect).
+// Builds without KWindowSystem (the AppImage, built on a distribution that doesn't package KF6) skip the blur;
+// the Glass themes are then see-through without it.
 extern "C" void vox_blur_behind(bool on) {
+#ifdef VOX_NO_KWINDOWSYSTEM
+    (void)on;
+#else
     for (QWindow *w : QGuiApplication::topLevelWindows())
         KWindowEffects::enableBlurBehind(w, on);
+#endif
 }
 
 // ---- Tray icon ----
@@ -31,6 +39,7 @@ extern "C" void vox_blur_behind(bool on) {
 // The QML owns the state and sends it as JSON (vox_tray_update); clicks come back as events the
 // QML already polls for (vox_push_event, see bridge.rs).
 #include <QAction>
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -69,12 +78,20 @@ void ensureTray() {
 }
 }
 
+// An icon by name from the desktop's icon theme; failing that, the one shipped next to the program
+// (an AppImage's icon isn't installed in the system, so the theme doesn't know it).
+static QIcon trayIcon(const QString &name) {
+    if (QIcon::hasThemeIcon(name)) return QIcon::fromTheme(name);
+    const QString shipped = QCoreApplication::applicationDirPath() + "/../share/icons/hicolor/scalable/apps/" + name + ".svg";
+    return QFile::exists(shipped) ? QIcon(shipped) : QIcon::fromTheme(name);
+}
+
 // `json`: {icon, tooltip, showHide, mute, scenes: [{name, active}]}. Shows the tray on first call.
 extern "C" void vox_tray_update(const char *json) {
     ensureTray();
     if (!tray.icon) return;
     const QJsonObject s = QJsonDocument::fromJson(QByteArray(json)).object();
-    tray.icon->setIcon(QIcon::fromTheme(s.value("icon").toString()));
+    tray.icon->setIcon(trayIcon(s.value("icon").toString()));
     tray.icon->setToolTip(s.value("tooltip").toString());
     tray.showHide->setText(s.value("showHide").toString());
     tray.mute->setText(s.value("mute").toString());

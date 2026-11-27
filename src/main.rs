@@ -46,6 +46,10 @@ unsafe extern "C" {
 }
 
 fn main() {
+    if std::env::var_os("LV2_PATH").is_none() {
+        // SAFETY: first thing in main, before any other thread exists.
+        unsafe { std::env::set_var("LV2_PATH", plugins::default_lv2_path()) };
+    }
     let Some(_instance) = claim_single_instance() else {
         eprintln!("vox-pro: already running");
         // Launched from the app menu there's no terminal, so say it on the desktop too.

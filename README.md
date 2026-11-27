@@ -72,10 +72,25 @@ channels and effects, or a lower latency setting use more. Plugins add their own
 
 ## Install
 
-Download `vox-pro-*-x86_64.pkg.tar.zst` from the
-[Releases page](https://github.com/Obscuratea/vox-pro/releases):
+Downloads are on the [Releases page](https://github.com/Obscuratea/vox-pro/releases).
+
+**Any distribution: the AppImage.** One file that runs on its own, nothing to install. Download
+`vox-pro-*-x86_64.AppImage`, make it runnable and start it:
+
+    chmod +x vox-pro-*-x86_64.AppImage
+    ./vox-pro-*-x86_64.AppImage
+
+(Or right-click it, Properties, allow it to run as a program, then double-click it.) Keep it somewhere
+permanent, such as `~/Applications`: "Check for updates" in Settings replaces this file with the new version.
+To add it to your app menu, use [Gear Lever](https://flathub.org/apps/it.mijorus.gearlever) or your
+desktop's own AppImage support. The AppImage has no blur behind the Glass themes on KDE Plasma (they are
+still see-through); the Arch package has it.
+
+**Arch, CachyOS, EndeavourOS, Manjaro: the package.** Download `vox-pro-*-x86_64.pkg.tar.zst`, then:
 
     sudo pacman -U vox-pro-*-x86_64.pkg.tar.zst
+
+Tested AppImage systems are listed in [TESTING.md](TESTING.md#the-appimage-on-other-distributions).
 
 ## Build
 

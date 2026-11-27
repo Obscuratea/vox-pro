@@ -21,7 +21,7 @@ push; each run and its full log are public on the
 | Plugins | A missing plugin leaves a silent slot and the sound untouched, dropped plugins are checked before they are copied, external plugins are told apart from LV2 ones, saved slots are cleaned up |
 | Settings | Older settings files (including 0.2) still load with their values and layout, the old three-band EQ becomes EQ cells, limits on channel counts, unique labels and names |
 | Recording | WAV length, FLAC checked by the reference `flac` decoder, Opus checked with `ffmpeg` |
-| Updater | Version comparison, a release needs both its package and its checksum |
+| Updater | Version comparison, a release needs both its package and its checksum; the AppImage updates from the release's AppImage, and only a real AppImage replaces it (a web page or broken download leaves the old file untouched) |
 | Start with the computer | The autostart entry runs this program |
 
 **2. Interface tests** (`tests/qml`, run without a screen): the program lists. Badges on sound card outputs,
@@ -45,9 +45,31 @@ Each release is installed and used on a real desktop before it is published. Som
 first as test builds (GitHub pre-releases) to testers. Release notes list the systems a release was
 tested on (OS and desktop).
 
+## The AppImage on other distributions
+
+`Scripts/test_appimage.sh` starts the AppImage in a fresh container of each distribution below, with that
+distribution's own PipeWire and WirePlumber, and checks that all of Vox's devices appear in PipeWire.
+It runs without a screen, so it checks that the program starts and works with that PipeWire, not how it
+looks or sounds there.
+
+| Distribution | glibc | PipeWire | Result |
+| --- | --- | --- | --- |
+| Ubuntu 24.04 LTS (also Linux Mint 22, Pop!_OS 24.04) | 2.39 | 1.0.5 | works |
+| Ubuntu 25.10 | 2.42 | 1.4.7 | works |
+| Debian 13 | 2.41 | 1.4.2 | works |
+| Fedora 42 | 2.41 | 1.4.11 | works |
+| Fedora 43 (also Bazzite) | 2.42 | 1.4.11 | works |
+| Arch Linux | 2.44 | 1.6.12 | works |
+| openSUSE Tumbleweed | 2.44 | 1.6.11 | works |
+| Debian 12 | 2.36 | 0.3.65 | does not start: too old for both |
+
+Last run 2026-11-27. The first run found two libraries that Debian 13 and Fedora 42 don't always have;
+the AppImage now carries them.
+
 ## Not tested yet
 
-- Desktops other than KDE Plasma and niri, and distributions other than Arch-based ones.
+- Desktops other than KDE Plasma and niri. Other distributions are tested in containers (below), not yet on
+  their real desktops.
 - Audio actually flowing through PipeWire in the automatic tests (planned: a headless PipeWire with test
   devices on GitHub's machines).
 - Most of the interface: the mixer strips, EQ dragging, Settings and the tray have no interface tests yet.

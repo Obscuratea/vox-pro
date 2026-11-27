@@ -287,16 +287,25 @@ struct World {
     external: Vec<serde_json::Value>,
 }
 
+/// Where LV2 plugins are looked for when LV2_PATH isn't set: every distribution's folders (Fedora and
+/// openSUSE use lib64, Debian and Ubuntu a multiarch folder). lilv's own default only knows the folders
+/// of the system it was built on, and the AppImage's lilv was built on Ubuntu.
+pub fn default_lv2_path() -> String {
+    let home = std::env::var("HOME").unwrap_or_default();
+    [format!("{home}/.lv2"), "/usr/local/lib/lv2".into(), "/usr/local/lib64/lv2".into(), "/usr/lib/lv2".into(), "/usr/lib64/lv2".into(), "/usr/lib/x86_64-linux-gnu/lv2".into()]
+        .join(":")
+}
+
 /// Where CLAP and VST3 plugins are looked for. `VOX_PLUGIN_PATH` (colon separated) adds more.
 fn plugin_dirs() -> (Vec<PathBuf>, Vec<PathBuf>) {
     let home = std::env::var_os("HOME").map(PathBuf::from);
     let extra: Vec<PathBuf> = std::env::var("VOX_PLUGIN_PATH").map(|v| v.split(':').filter(|s| !s.is_empty()).map(PathBuf::from).collect()).unwrap_or_default();
     let mut clap: Vec<PathBuf> = std::env::var("CLAP_PATH").map(|v| v.split(':').filter(|s| !s.is_empty()).map(PathBuf::from).collect()).unwrap_or_default();
     clap.extend(home.iter().map(|h| h.join(".clap")));
-    clap.extend(["/usr/lib/clap", "/usr/local/lib/clap"].map(PathBuf::from));
+    clap.extend(["/usr/lib/clap", "/usr/lib64/clap", "/usr/local/lib/clap"].map(PathBuf::from));
     clap.extend(extra.clone());
     let mut vst3: Vec<PathBuf> = home.iter().map(|h| h.join(".vst3")).collect();
-    vst3.extend(["/usr/lib/vst3", "/usr/local/lib/vst3"].map(PathBuf::from));
+    vst3.extend(["/usr/lib/vst3", "/usr/lib64/vst3", "/usr/local/lib/vst3"].map(PathBuf::from));
     vst3.extend(extra);
     (clap, vst3)
 }
