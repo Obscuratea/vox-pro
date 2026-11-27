@@ -1,5 +1,7 @@
 # Vox Pro
 
+[![Tests](https://github.com/Obscuratea/vox-pro/actions/workflows/tests.yml/badge.svg)](https://github.com/Obscuratea/vox-pro/actions/workflows/tests.yml)
+
 Audio mixer and router for Linux (PipeWire) with a plugin rack. Rust + Qt Quick. Not affiliated with
 VB-Audio. The smaller version is [Vox Obscurus](https://github.com/Obscuratea/vox-obscurus).
 
