@@ -53,6 +53,13 @@ Plugins are found in `/usr/lib/{lv2,clap,vst3}` and `~/.{lv2,clap,vst3}`. None a
 - Instruments, MIDI plugins and plugins with more than two channels are not listed.
 - If a plugin crashes Vox, the next start leaves it out.
 
+## Requirements
+
+A Linux system that uses **PipeWire** (0.3.77 or newer) with WirePlumber for its sound. Most current
+distributions do: Fedora, Bazzite, SteamOS, Arch and CachyOS, Ubuntu 24.04 and newer, Linux Mint 22 and
+newer, Debian 13. Systems that still use PulseAudio (for example Ubuntu 22.04 or Linux Mint 21) are not
+supported. To check, run `pactl info | grep "Server Name"`: it should mention PipeWire.
+
 ## Install
 
 Download `vox-pro-*-x86_64.pkg.tar.zst` from the
