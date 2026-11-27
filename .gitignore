@@ -4,3 +4,5 @@
 /packaging/*.pkg.tar.zst
 .qmlls.ini
 /release
+/packaging/*.sha256
+aqtinstall.log
