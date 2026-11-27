@@ -821,6 +821,7 @@ Flickable {
 
                 Opt {
                     title: scroller.app.appName + " " + scroller.app.version
+                    note: "Made by Obscuratea"
                     Lnk { text: "Ko-fi"; tip: "ko-fi.com/obscuratea"; onClicked: Qt.openUrlExternally("https://ko-fi.com/obscuratea") }
                     Lnk { text: "Patreon"; tip: "patreon.com/Obscuratea"; onClicked: Qt.openUrlExternally("https://patreon.com/Obscuratea") }
                 }

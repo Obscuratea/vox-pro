@@ -1,0 +1,33 @@
+# Runs every automated test (Scripts/test.sh) on a fresh Arch Linux machine, on every push.
+# The results are public: the Actions tab on GitHub shows each run and its full log. See TESTING.md.
+name: Tests
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install build tools and libraries
+        run: >
+          pacman -Syu --noconfirm --needed
+          base-devel git rust clang cmake binutils
+          pipewire wireplumber qt6-base qt6-declarative kwindowsystem soundtouch libnotify curl lilv
+          flac ffmpeg
+
+      - uses: actions/checkout@v4
+
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+
+      - name: Run all tests
+        run: Scripts/test.sh

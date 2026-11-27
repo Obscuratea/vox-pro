@@ -8,7 +8,7 @@ VER=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
 PKGVER=$(grep -m1 '^pkgver=' packaging/PKGBUILD | cut -d= -f2)
 [ "$VER" = "$PKGVER" ] || { echo "Cargo.toml says $VER but PKGBUILD says $PKGVER"; exit 1; }
 python3 Scripts/gen_third_party.py . "Vox Pro" --pro
-cargo test --release
+Scripts/test.sh
 (cd packaging && makepkg -f --noconfirm)
 mkdir -p release && rm -f release/*
 PKG=$(ls -t packaging/*.pkg.tar.zst | head -1)
